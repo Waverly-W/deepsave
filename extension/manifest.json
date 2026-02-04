@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "DeepSave Pro Clipper",
+    "version": "1.0.0",
+    "description": "Capture content for DeepSave Pro",
+    "action": {
+        "default_popup": "index.html",
+        "default_title": "DeepSave Pro"
+    },
+    "background": {
+        "service_worker": "src/background.ts",
+        "type": "module"
+    },
+    "permissions": [
+        "activeTab",
+        "contextMenus",
+        "storage",
+        "tabs",
+        "scripting"
+    ],
+    "host_permissions": [
+        "http://localhost:8000/*"
+    ]
+}

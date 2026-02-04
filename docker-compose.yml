@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------------------
+  # Data Layer
+  # -------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: deepsave-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-deepsave}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-deepsave_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-deepsave}
+    volumes:
+      - ./data/pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - deepsave-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deepsave"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: deepsave-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - ./data/redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - deepsave-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: deepsave-chroma
+    restart: always
+    environment:
+      - IS_PERSISTENT=TRUE
+    volumes:
+      - ./data/chroma_data:/chroma/chroma
+    ports:
+      - "8000:8000"
+    networks:
+      - deepsave-net
+
+  # -------------------------------------------------------------------------
+  # Application Layer (Placeholders for now)
+  # -------------------------------------------------------------------------
+  # backend:
+  #   build: ./backend
+  #   container_name: deepsave-backend
+  #   ...
+  
+  # frontend:
+  #   build: ./frontend
+  #   ...
+
+networks:
+  deepsave-net:
+    driver: bridge

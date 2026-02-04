@@ -1,0 +1,20 @@
+# Project Progress
+
+## Status: Phase 1 (Foundation)
+
+- [x] **Project Interrogation** (Completed 2026-02-04)
+- [x] **Core Documentation** (Completed 2026-02-04)
+    - [x] PRD
+    - [x] Tech Stack
+    - [x] App Flow
+    - [x] Backend Structure
+    - [x] Frontend Guidelines
+    - [x] Implementation Plan
+- [x] **Infrastructure**
+    - [x] Docker Compose
+    - [x] Repo Structure
+- [x] **Backend Base**
+- [x] **Frontend Base**
+- [x] **Ingestion Engine** (Extension + Worker)
+- [x] **Vector Search Logic** (Code only, Infra pending)
+- [x] **Dashboard UI** (Gallery View Implemented)

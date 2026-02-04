@@ -1,0 +1,27 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.env
+backend/.env
+backend/venv/
+
+# Node / Frontend / Extension
+node_modules/
+dist/
+.next/
+out/
+build/
+.turbo/
+coverage/
+frontend/.env.local
+extension/.env
+
+# Local Data (Docker Volumes)
+data/
