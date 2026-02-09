@@ -1,49 +1,49 @@
-# Technology Stack (TECH_STACK.md)
+# DeepSave Pro 技术栈（TECH_STACK）
 
-> **Strict Enforcement:** No libraries outside this list may be introduced without an update to this document.
+> **严格锁定**：本文件为技术栈唯一权威来源，修改需同步更新相关文档与实现。
 
-## 1. Frontend (The Interface)
-*   **Framework**: Next.js 14+ (App Router)
-*   **Language**: TypeScript 5.x
-*   **Styling**: Tailwind CSS 3.x
-*   **UI Components**: shadcn/ui (Radix UI based)
-*   **Icons**: Lucide React
-*   **State Management**: Zustand (for global store), TanStack Query (React Query) v5 (for API state)
-*   **Form Handling**: React Hook Form + Zod (Validation)
-*   **Markdown Rendering**: `react-markdown` + `rehype-highlight`
+## 1. 前端
+- Framework：Next.js 14+（App Router）
+- Language：TypeScript 5.x
+- Styling：Tailwind CSS 3.x（`darkMode: 'class'`）
+- UI：shadcn/ui（Radix UI）
+- State：Zustand（全局）、TanStack Query v5（API）
+- Forms：React Hook Form + Zod
+- Auth：NextAuth.js（Credentials Provider）
 
-## 2. Backend (The Core)
-*   **Language**: Python 3.11+
-*   **Web Framework**: FastAPI (Async)
-*   **Task Queue**: Celery 5.x
-*   **Message Broker**: Redis 7.x (Alpine)
-*   **Database ORM**: SQLAlchemy 2.0+ (Async)
-*   **Migrations**: Alembic
-*   **Authentication**:
-    *   `python-jose` (JWT handling)
-    *   `passlib` (bcrypt hashing)
-    *   `pyotp` (2FA/TOTP generation & verification)
+## 2. 后端
+- Language：Python 3.11+
+- Web：FastAPI（Async）
+- Task Queue：Celery 5.x
+- Broker：Redis 7.x
+- ORM：SQLAlchemy 2.x（Async）
+- Migrations：Alembic（Mandatory）
 
-## 3. Data Persistence (The Memory)
-*   **Relational DB**: PostgreSQL 15 (Alpine)
-    *   Run on NAS via Docker.
-*   **Vector DB**: ChromaDB (Running in Client/Server mode on NAS)
-    *   Using Docker container: `chromadb/chroma`
-*   **File Storage**: Local NAS Filesystem (Mapped Volume)
+## 3. 数据存储与检索
+- Database：PostgreSQL 16（pgvector/pg_trgm）
+- Vector：pgvector（HNSW 索引）
+- FTS：Postgres + jieba 分词 + tsvector
+- Artifacts：NAS 文件系统（/data/artifacts/...）
 
-## 4. AI & Scraping (The Agents)
-*   **Scraping**:
-    *   `trafilatura` (Primary, text extraction)
-    *   `playwright` (Secondary, DOM Snapshot)
-    *   `beautifulsoup4` (Parsing)
-*   **LLM Interface**: `openai` (Python SDK - compatible with Ollama & DeepSeek)
-*   **Embedding**: `sentence-transformers` (Local CPU) or API-based.
+## 4. AI 与处理
+- LLM 接口：OpenAI Compatible SDK（支持 DeepSeek/Moonshot 等）
+- Embedding：
+  - Local：BAAI/bge-m3（sentence-transformers）
+  - Cloud：Aliyun text-embedding-v4（dimensions=1024，Key=ALIYUN_API_KEY）
+- Vision：MiniCPM-V 或兼容的云端 Vision API
 
-## 5. DevOps & Infrastructure
-*   **Runtime**: Docker Engine + Docker Compose
-*   **Reverse Proxy**: Nginx (Optional, handling SSL termination if not using Cloudflare)
-*   **CI/CD**: Local Git Hooks (Pre-commit: Black, Flake8, ESLint)
+## 5. 采集与解析
+- Primary：trafilatura
+- Fallback：Playwright
+- Parsing：beautifulsoup4
+- 中文分词：jieba
+- 色板提取：colorgram.py
 
-## 6. Browser Extension
-*   **Manifest**: V3
-*   **Framework**: React + Vite (Build to static assets)
+## 6. 工具与脚本
+- clipboard_monitor.py：pyperclip + requests
+
+## 7. 安全
+- 密码哈希：bcrypt（cost=12）
+- JWT：HS256（24h 过期）
+- API Key：AES-GCM（APP_SECRET_KEY）
+- Access Token：随机 32 字符十六进制，DB 存 SHA-256

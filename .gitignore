@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual env
+.venv/
+
+# Node / Next.js
+node_modules/
+.next/
+dist/
+
+# Coverage
+coverage/
+
+# Env files
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS
+.DS_Store

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepSave Pro</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <div class="brand">
+          <img src="icons/green-32.png" alt="" class="brand-icon" />
+          <div>
+            <h1>DeepSave Pro</h1>
+            <p class="subtitle">Quick capture</p>
+          </div>
+        </div>
+        <button id="settings-toggle" class="icon-button" aria-label="Open settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a7.8 7.8 0 0 0 .1-6l-2 1.1a6 6 0 0 0-1.6-1.6l1.1-2a7.8 7.8 0 0 0-6-.1l.1 2.2a6 6 0 0 0-1.6 1.6l-2-1.1a7.8 7.8 0 0 0-.1 6l2-1.1a6 6 0 0 0 1.6 1.6l-.1 2.2a7.8 7.8 0 0 0 6 .1l-1.1-2a6 6 0 0 0 1.6-1.6z"
+            ></path>
+          </svg>
+        </button>
+      </header>
+
+      <section class="status" aria-live="polite">
+        <span id="status-dot" class="dot idle"></span>
+        <span id="status-text">Idle</span>
+      </section>
+
+      <div id="message" class="message" role="status"></div>
+
+      <main id="view-home" class="view">
+        <section class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16"></path>
+              <path d="M4 12h16"></path>
+              <path d="M4 17h10"></path>
+            </svg>
+            <h2>Current page</h2>
+          </div>
+          <div class="field">
+            <label>Title</label>
+            <div id="page-title" class="value">Loading...</div>
+          </div>
+          <div class="field">
+            <label>URL</label>
+            <div id="page-url" class="value">Loading...</div>
+          </div>
+          <button id="save-page" class="primary">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
+            </svg>
+            Save page
+          </button>
+        </section>
+      </main>
+
+      <main id="view-settings" class="view is-hidden" aria-hidden="true">
+        <div class="view-header">
+          <button id="settings-back" class="icon-button" aria-label="Back to main">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
+          <h2>Settings</h2>
+        </div>
+        <section class="card">
+          <label for="api-url">API URL</label>
+          <input id="api-url" placeholder="http://127.0.0.1:8356" />
+          <label for="access-token">Access token</label>
+          <input id="access-token" type="password" placeholder="Paste token" />
+          <button id="save-settings">Save settings</button>
+          <p class="hint">Token is stored locally in this extension.</p>
+        </section>
+      </main>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

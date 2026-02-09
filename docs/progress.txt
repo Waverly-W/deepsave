@@ -1,0 +1,110 @@
+DeepSave Pro 进度追踪（详细版）
+
+规则：每个“实现任务”后必须完成对应的“测试任务”。
+
+Phase 0 文档锁定
+[x] 0.1 核对 PRD/APP_FLOW/TECH_STACK/FRONTEND_GUIDELINES/BACKEND_STRUCTURE/IMPLEMENTATION_PLAN 与 QA1-4 一致
+[x] 0.1.T 测试：逐条比对关键口径（PG+pgvector+pg_trgm、JWT、API 端点、检索策略），记录差异为 0
+[x] 0.2 更新 AGENTS.md 与 CLAUDE.md 的权威来源说明
+[x] 0.2.T 测试：确认 AGENTS.md 与 CLAUDE.md 中的技术栈描述一致
+
+Phase 1 基础设施与骨架
+[x] 1.1 创建后端目录结构（app/api, app/models, app/services, app/worker, app/scraper, app/ai, app/search）
+[x] 1.1.T 测试：运行项目检查（如 `python -m compileall`）确保目录与模块可导入
+[x] 1.2 初始化 FastAPI 入口与基础路由骨架
+[x] 1.2.T 测试：`GET /health` 返回 200
+[x] 1.3 初始化 Next.js 工程骨架与基础页面
+[x] 1.3.T 测试：`/` 页面可加载，展示占位内容
+[x] 1.4 编写 docker-compose（cpu/gpu profile）与端口规划
+[x] 1.4.T 测试：`docker compose --profile cpu up` 可启动核心服务
+[x] 1.5 配置 Postgres 镜像与扩展初始化脚本（pgvector/pg_trgm）
+[x] 1.5.T 测试：进入 PG 容器执行 `\dx`，确认扩展已安装
+[x] 1.6 初始化 Alembic 与首个空迁移
+[x] 1.6.T 测试：`alembic upgrade head` 成功且无报错
+
+Phase 2 后端核心链路
+[x] 2.1 设计并实现 users 表（含 last_password_reset_at）
+[x] 2.1.T 测试：创建用户记录并可查询
+[x] 2.2 实现 /system/status 与 /system/init-status
+[x] 2.2.T 测试：返回值包含 initialized 状态
+[x] 2.3 实现 /auth/login（JWT HS256，24h）
+[x] 2.3.T 测试：正确密码获取 JWT，错误密码返回 401
+[x] 2.4 实现 Access Token 生成与存储（SHA-256）
+[x] 2.4.T 测试：Token 仅展示一次，DB 中仅存 Hash
+[x] 2.5 实现 items 表与相关索引（normalized_url 唯一）
+[x] 2.5.T 测试：重复 URL 触发 upsert 逻辑
+[x] 2.6 实现 tags/item_tags 表与 cached_tags
+[x] 2.6.T 测试：同名不同 category 可共存
+[x] 2.7 实现 /items/ingest（异步返回 task_id + item_id）
+[x] 2.7.T 测试：返回 202 且 task_id 可查询状态
+[x] 2.8 实现 Redis 幂等锁（TTL=600s）
+[x] 2.8.T 测试：重复提交同 URL 被拒绝或复用任务
+[x] 2.9 建立 Celery worker 基础任务框架
+[x] 2.9.T 测试：任务入队可被 worker 执行
+
+Phase 3 AI 与检索
+[x] 3.1 实现 HTTP 抓取（trafilatura）
+[x] 3.1.T 测试：给定普通网页可提取正文
+[x] 3.2 实现 Playwright 兜底抓取与截图保存
+[x] 3.2.T 测试：对 SPA 页面能保存 HTML 快照
+[x] 3.3 实现 Router 规则（YAML 配置）
+[x] 3.3.T 测试：不同 URL 触发不同类型
+[x] 3.4 集成 LLM 摘要与标签输出（3 bullets）
+[x] 3.4.T 测试：输出符合 JSON 结构与字段默认值
+[x] 3.5 实现图片描述 + 色板提取（colorgram.py）
+[x] 3.5.T 测试：图片生成 description 与 palette
+[x] 3.6 实现分块与向量化（bge-m3 / text-embedding-3-small）
+[x] 3.6.T 测试：插入 item_chunks 且向量维度 1024
+[x] 3.7 建立 HNSW 索引（pgvector）
+[x] 3.7.T 测试：向量查询可返回相似 chunk
+[x] 3.8 实现 pg_trgm 标题/标签模糊检索
+[x] 3.8.T 测试：输入缩写可命中标题或标签
+[x] 3.9 实现 jieba 分词 + tsvector 正文检索
+[x] 3.9.T 测试：中文查询能命中正文
+[x] 3.10 实现 RRF 融合排序
+[x] 3.10.T 测试：三层结果融合后排序稳定
+[x] 3.11 完成 /search 接口
+[x] 3.11.T 测试：同一查询可返回混合结果
+
+Phase 4 前端 MVP
+[x] 4.1 实现 /setup 初始化页（仅首次可访问）
+[x] 4.1.T 测试：已有用户时自动跳转 /login
+[x] 4.2 实现 /login 与 NextAuth Session
+[x] 4.2.T 测试：登录后可访问受保护页面
+[x] 4.3 实现首页布局与搜索输入框
+[x] 4.3.T 测试：输入命令与自然语言均可触发查询
+[x] 4.4 实现 Chat/Gallery Tabs（/?view=chat|gallery）
+[x] 4.4.T 测试：切换视图 URL 保持状态
+[x] 4.5 实现卡片列表与无限滚动
+[x] 4.5.T 测试：滚动触发分页加载
+[x] 4.6 实现任务状态轮询与卡片状态展示
+[x] 4.6.T 测试：processing→completed/failed 状态正确更新
+[x] 4.7 实现详情页（Deep Reader）
+[x] 4.7.T 测试：进入详情页即标记 is_read=true
+[x] 4.8 实现归档/删除/重试操作
+[x] 4.8.T 测试：操作后数据与 UI 同步更新
+[x] 4.9 实现设置页（主题切换、Access Token 生成）
+[x] 4.9.T 测试：生成 Token 后可用于 API 请求
+
+Phase 5 采集工具
+[ ] 5.1 实现 clipboard_monitor.py（读取 .env）（长期跳过：优先度不高且跨平台复杂）
+[ ] 5.1.T 测试：复制 URL 后可成功入库（长期跳过：优先度不高且跨平台复杂）
+[x] 5.2 实现 Chrome 扩展（Popup + Context Menu）
+[x] 5.2.T 测试：保存当前页与选中文本均成功
+
+阶段性备注（会话总结）
+- 编辑保存与分析重跑解耦：新增内容/分析修订号（content_revision/analysis_revision/processing_target_revision）。
+- 详情页编辑改为手动保存（右上角“保存”按钮），保存后才提示“待重算/重算分析”。
+- 新增重跑接口 `/items/{id}/reprocess-content`，仅手动触发重算摘要+标签+向量。
+
+Phase 6 稳定性与交付
+[x] 6.1 配置任务超时（Playwright/LLM/Embedding）
+[x] 6.1.T 测试：超时任务进入 failed/partial_fail
+[x] 6.2 实现 LLM 失败重试（3 次指数退避）
+[x] 6.2.T 测试：临时失败可重试成功
+[x] 6.3 实现回收站清理（30 天）与 task_logs 清理（7 天）
+[x] 6.3.T 测试：过期记录被清理
+[x] 6.4 编写部署与运行文档（端口、环境变量、常见问题）
+[x] 6.4.T 测试：新机器按文档部署可运行
+[x] 6.5 端到端验收
+[x] 6.5.T 测试：从采集到检索的完整闭环 ≤ 15s

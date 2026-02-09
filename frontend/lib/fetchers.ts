@@ -1,0 +1,262 @@
+import { apiUrl } from "./api";
+import type {
+  AccessTokenResponse,
+  AiSettingsResponse,
+  AiSettingsTestResponse,
+  AiSettingsUpdate,
+  IngestResponse,
+  ItemDetail,
+  ItemsResponse,
+  ItemsOverview,
+  SearchResponse
+} from "./types";
+
+type FetchOptions = {
+  token?: string;
+  keepalive?: boolean;
+};
+
+export async function fetchItems(
+  params: {
+    cursor?: string | null;
+    limit?: number;
+    sourceType?: string | null;
+    archived?: boolean;
+  },
+  options: FetchOptions = {}
+): Promise<ItemsResponse> {
+  const url = new URL(apiUrl("/items"));
+  if (params.cursor) {
+    url.searchParams.set("cursor", params.cursor);
+  }
+  if (params.limit) {
+    url.searchParams.set("limit", String(params.limit));
+  }
+  if (params.sourceType) {
+    url.searchParams.set("type", params.sourceType);
+  }
+  if (params.archived) {
+    url.searchParams.set("archived", "true");
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load items");
+  }
+  return (await response.json()) as ItemsResponse;
+}
+
+export async function fetchSearch(
+  params: {
+    query: string;
+    limit?: number;
+    sourceType?: string | null;
+  },
+  options: FetchOptions = {}
+): Promise<SearchResponse> {
+  const url = new URL(apiUrl("/search"));
+  url.searchParams.set("q", params.query);
+  if (params.limit) {
+    url.searchParams.set("limit", String(params.limit));
+  }
+  if (params.sourceType) {
+    url.searchParams.set("type", params.sourceType);
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load search results");
+  }
+  return (await response.json()) as SearchResponse;
+}
+
+export async function fetchItemsOverview(
+  options: FetchOptions = {}
+): Promise<ItemsOverview> {
+  const response = await fetch(apiUrl("/items/overview"), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load items overview");
+  }
+  return (await response.json()) as ItemsOverview;
+}
+
+export async function fetchItemDetail(
+  itemId: string,
+  options: FetchOptions = {}
+): Promise<ItemDetail> {
+  const response = await fetch(apiUrl(`/items/${itemId}`), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load item");
+  }
+  return (await response.json()) as ItemDetail;
+}
+
+export async function updateItem(
+  itemId: string,
+  payload: {
+    is_archived?: boolean;
+    is_deleted?: boolean;
+    is_read?: boolean;
+    content_text?: string | null;
+    title?: string | null;
+  },
+  options: FetchOptions = {}
+): Promise<ItemDetail> {
+  const response = await fetch(apiUrl(`/items/${itemId}`), {
+    method: "PATCH",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+    keepalive: options.keepalive ?? false
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update item");
+  }
+  return (await response.json()) as ItemDetail;
+}
+
+export async function reprocessItemContent(
+  itemId: string,
+  options: FetchOptions = {}
+): Promise<{ task_id: string; item_id: string }> {
+  const response = await fetch(apiUrl(`/items/${itemId}/reprocess-content`), {
+    method: "POST",
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to reprocess item content");
+  }
+  return (await response.json()) as { task_id: string; item_id: string };
+}
+
+export async function requeueItem(
+  itemId: string,
+  options: FetchOptions = {}
+): Promise<{ task_id: string; item_id: string }> {
+  const response = await fetch(apiUrl(`/items/${itemId}/requeue`), {
+    method: "POST",
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to requeue item");
+  }
+  return (await response.json()) as { task_id: string; item_id: string };
+}
+
+export async function ingestItem(
+  payload: {
+    url: string;
+    sourceType?: string | null;
+  },
+  options: FetchOptions = {}
+): Promise<IngestResponse> {
+  const response = await fetch(apiUrl("/items/ingest"), {
+    method: "POST",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      url: payload.url,
+      source_type: payload.sourceType ?? undefined
+    }),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to ingest item");
+  }
+  return (await response.json()) as IngestResponse;
+}
+
+export async function createAccessToken(
+  payload: {
+    label?: string;
+  },
+  options: FetchOptions = {}
+): Promise<AccessTokenResponse> {
+  const response = await fetch(apiUrl("/system/keys"), {
+    method: "POST",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ label: payload.label ?? null }),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to create access token");
+  }
+  return (await response.json()) as AccessTokenResponse;
+}
+
+export async function fetchAiSettings(
+  options: FetchOptions = {}
+): Promise<AiSettingsResponse> {
+  const response = await fetch(apiUrl("/system/ai-settings"), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load AI settings");
+  }
+  return (await response.json()) as AiSettingsResponse;
+}
+
+export async function updateAiSettings(
+  payload: AiSettingsUpdate,
+  options: FetchOptions = {}
+): Promise<AiSettingsResponse> {
+  const response = await fetch(apiUrl("/system/ai-settings"), {
+    method: "PUT",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update AI settings");
+  }
+  return (await response.json()) as AiSettingsResponse;
+}
+
+export async function testAiSettings(
+  payload: { target: "all" | "llm" | "embedding" },
+  options: FetchOptions = {}
+): Promise<AiSettingsTestResponse> {
+  const response = await fetch(apiUrl("/system/ai-settings/test"), {
+    method: "POST",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to test AI settings");
+  }
+  return (await response.json()) as AiSettingsTestResponse;
+}
+
+function authHeaders(token?: string) {
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}

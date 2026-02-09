@@ -1,0 +1,123 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    profiles: ["cpu", "gpu"]
+    environment:
+      POSTGRES_USER: deepsave
+      POSTGRES_PASSWORD: deepsave
+      POSTGRES_DB: deepsave
+    volumes:
+      - ./db/init/00-init-extensions.sql:/docker-entrypoint-initdb.d/00-init-extensions.sql:ro
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deepsave"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["cpu", "gpu"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    profiles: ["cpu", "gpu"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deepsave:deepsave@db:5432/deepsave
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      APP_SECRET_KEY: change-me
+      ALIYUN_API_KEY: ${ALIYUN_API_KEY}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://127.0.0.1:3000,http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/config:ro
+    ports:
+      - "0.0.0.0:8356:8356"
+
+  worker:
+    build:
+      context: ./backend
+    profiles: ["cpu", "gpu"]
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deepsave:deepsave@db:5432/deepsave
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      APP_SECRET_KEY: change-me
+      ALIYUN_API_KEY: ${ALIYUN_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/config:ro
+
+  beat:
+    build:
+      context: ./backend
+    profiles: ["cpu", "gpu"]
+    command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://deepsave:deepsave@db:5432/deepsave
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      APP_SECRET_KEY: change-me
+      ALIYUN_API_KEY: ${ALIYUN_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/config:ro
+
+  frontend:
+    build:
+      context: ./frontend
+    profiles: ["cpu", "gpu"]
+    environment:
+      API_BASE_URL: http://backend:8356
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
+      NEXT_PUBLIC_API_PORT: ${NEXT_PUBLIC_API_PORT:-8356}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://127.0.0.1:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+    ports:
+      - "0.0.0.0:3000:3000"
+    depends_on:
+      backend:
+        condition: service_started
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["gpu"]
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+
+volumes:
+  pg_data:
+  redis_data:
+  ollama:

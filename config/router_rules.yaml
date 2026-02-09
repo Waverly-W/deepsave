@@ -1,0 +1,11 @@
+image_suffixes:
+  - .jpg
+  - .jpeg
+  - .png
+  - .gif
+  - .webp
+  - .bmp
+domain_map:
+  github.com: code
+  stackoverflow.com: code
+  stackexchange.com: code
