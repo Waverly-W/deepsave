@@ -150,3 +150,5 @@ Phase 7 上线修复（repair.md）
 [x] 7.16.T 测试：`python3 -m compileall backend/app`、`npm -C frontend run lint`、`npm -C frontend run build`、`APP_SECRET_KEY=... docker compose config --quiet` 全部通过；清理 `frontend/tsconfig.tsbuildinfo`
 [x] 7.17 前端 lint 警告清零（minimal-tiptap 图片节点）
 [x] 7.17.T 测试：`npm -C frontend run lint` 输出 `No ESLint warnings or errors`；`npm -C frontend run build` 再次通过
+[x] 7.18 登录态过期与 401 跳转修复（会话时长对齐 + 401 统一回登录）
+[x] 7.18.T 测试：`npm -C frontend run lint`、`cd frontend && npx tsc --noEmit`、`npm -C frontend run build` 通过；容器重建后 `docker compose --profile cpu ps` 正常，前端可启动

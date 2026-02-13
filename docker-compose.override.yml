@@ -19,5 +19,5 @@ services:
       - ./frontend/app:/app/app
       - ./frontend/components:/app/components
       - ./frontend/lib:/app/lib
+      - ./frontend/types:/app/types
       - ./frontend/middleware.ts:/app/middleware.ts
-      - ./frontend/next-auth.d.ts:/app/next-auth.d.ts

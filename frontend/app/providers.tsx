@@ -10,6 +10,7 @@ import { I18nProvider } from "../lib/i18n-provider";
 import { PreferencesProvider } from "../lib/preferences";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
+import AuthRedirectListener from "../components/auth-redirect-listener";
 
 export default function Providers({
   children,
@@ -23,6 +24,7 @@ export default function Providers({
   return (
     <I18nProvider initialLocale={initialLocale}>
       <SessionProvider>
+        <AuthRedirectListener />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

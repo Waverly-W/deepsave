@@ -1,4 +1,5 @@
 import { apiUrl } from "./api";
+import { AUTH_UNAUTHORIZED_EVENT } from "./auth-events";
 import type {
   AccessTokenListResponse,
   AccessTokenRevokeResponse,
@@ -49,7 +50,7 @@ export async function fetchItems(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load items");
+    throw buildApiError(response, "Failed to load items");
   }
   return (await response.json()) as ItemsResponse;
 }
@@ -76,7 +77,7 @@ export async function fetchSearch(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load search results");
+    throw buildApiError(response, "Failed to load search results");
   }
   return (await response.json()) as SearchResponse;
 }
@@ -89,7 +90,7 @@ export async function fetchItemsOverview(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load items overview");
+    throw buildApiError(response, "Failed to load items overview");
   }
   return (await response.json()) as ItemsOverview;
 }
@@ -107,7 +108,7 @@ export async function fetchTagTree(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load tag tree");
+    throw buildApiError(response, "Failed to load tag tree");
   }
   return (await response.json()) as { tree: TagTreeNode[] };
 }
@@ -121,7 +122,7 @@ export async function fetchItemDetail(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load item");
+    throw buildApiError(response, "Failed to load item");
   }
   return (await response.json()) as ItemDetail;
 }
@@ -149,7 +150,7 @@ export async function updateItem(
     keepalive: options.keepalive ?? false
   });
   if (!response.ok) {
-    throw new Error("Failed to update item");
+    throw buildApiError(response, "Failed to update item");
   }
   return (await response.json()) as ItemDetail;
 }
@@ -164,7 +165,7 @@ export async function reprocessItemContent(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to reprocess item content");
+    throw buildApiError(response, "Failed to reprocess item content");
   }
   return (await response.json()) as { task_id: string; item_id: string };
 }
@@ -179,7 +180,7 @@ export async function polishItemContent(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to polish item content");
+    throw buildApiError(response, "Failed to polish item content");
   }
   return (await response.json()) as { task_id: string; item_id: string };
 }
@@ -206,7 +207,7 @@ export async function requeueItem(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to requeue item");
+    throw buildApiError(response, "Failed to requeue item");
   }
   return (await response.json()) as { task_id: string; item_id: string };
 }
@@ -231,7 +232,7 @@ export async function ingestItem(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to ingest item");
+    throw buildApiError(response, "Failed to ingest item");
   }
   return (await response.json()) as IngestResponse;
 }
@@ -256,7 +257,7 @@ export async function createNote(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to create note");
+    throw buildApiError(response, "Failed to create note");
   }
   return (await response.json()) as CreateNoteResponse;
 }
@@ -296,7 +297,7 @@ export async function createAccessToken(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to create access token");
+    throw buildApiError(response, "Failed to create access token");
   }
   return (await response.json()) as AccessTokenResponse;
 }
@@ -309,7 +310,7 @@ export async function listAccessTokens(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load access tokens");
+    throw buildApiError(response, "Failed to load access tokens");
   }
   return (await response.json()) as AccessTokenListResponse;
 }
@@ -324,7 +325,7 @@ export async function revokeAccessToken(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to revoke access token");
+    throw buildApiError(response, "Failed to revoke access token");
   }
   return (await response.json()) as AccessTokenRevokeResponse;
 }
@@ -337,7 +338,7 @@ export async function fetchAiSettings(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to load AI settings");
+    throw buildApiError(response, "Failed to load AI settings");
   }
   return (await response.json()) as AiSettingsResponse;
 }
@@ -356,7 +357,7 @@ export async function updateAiSettings(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to update AI settings");
+    throw buildApiError(response, "Failed to update AI settings");
   }
   return (await response.json()) as AiSettingsResponse;
 }
@@ -375,9 +376,26 @@ export async function testAiSettings(
     cache: "no-store"
   });
   if (!response.ok) {
-    throw new Error("Failed to test AI settings");
+    throw buildApiError(response, "Failed to test AI settings");
   }
   return (await response.json()) as AiSettingsTestResponse;
+}
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+function buildApiError(response: Response, fallbackMessage: string): ApiError {
+  if (response.status === 401 && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+  }
+  return new ApiError(fallbackMessage, response.status);
 }
 
 function authHeaders(token?: string) {
