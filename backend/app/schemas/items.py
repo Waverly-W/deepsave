@@ -1,11 +1,11 @@
 from datetime import datetime
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, Field
 
 
 class IngestRequest(BaseModel):
-    url: str = Field(min_length=1)
+    url: AnyHttpUrl
     source_type: str | None = None
     content_text: str | None = None
     title: str | None = None

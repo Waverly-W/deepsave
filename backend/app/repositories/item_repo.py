@@ -25,6 +25,8 @@ class ItemRepository:
             "url": url,
             "normalized_url": normalized_url,
             "source_type": source_type,
+            "is_deleted": False,
+            "is_archived": False,
         }
         if title is not None:
             values["title"] = title
@@ -32,12 +34,18 @@ class ItemRepository:
             values["content_text"] = content_text
             values["content_revision"] = 1
             values["content_format"] = content_format or "html"
+            values["processing_target_revision"] = 1
+        else:
+            values["processing_target_revision"] = 0
 
         update_values: dict[str, object] = {
             "url": url,
             "source_type": source_type,
             "processing_status": "pending",
+            "is_deleted": False,
+            "is_archived": False,
             "updated_at": func.now(),
+            "processing_target_revision": Item.content_revision,
         }
         if title is not None:
             update_values["title"] = title
@@ -45,6 +53,7 @@ class ItemRepository:
             update_values["content_text"] = content_text
             update_values["content_revision"] = Item.content_revision + 1
             update_values["content_format"] = content_format or "html"
+            update_values["processing_target_revision"] = Item.content_revision + 1
 
         stmt = (
             insert(Item)

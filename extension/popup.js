@@ -10,6 +10,7 @@ const viewSettings = document.getElementById("view-settings");
 const apiUrlInput = document.getElementById("api-url");
 const accessTokenInput = document.getElementById("access-token");
 const saveSettingsBtn = document.getElementById("save-settings");
+const clearTokenBtn = document.getElementById("clear-token");
 const savePageBtn = document.getElementById("save-page");
 
 let currentTab = null;
@@ -57,27 +58,96 @@ function isHttpUrl(value) {
   }
 }
 
+function decodeJwtPayload(token) {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  try {
+    const payload = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+    return JSON.parse(atob(payload));
+  } catch (error) {
+    return null;
+  }
+}
+
+function isTokenExpired(token) {
+  if (!token) {
+    return false;
+  }
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") {
+    return false;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  return now >= payload.exp;
+}
+
+async function ensureApiPermission(apiUrl) {
+  const parsed = new URL(apiUrl);
+  const originPattern = `${parsed.origin}/*`;
+  const alreadyGranted = await chrome.permissions.contains({
+    origins: [originPattern]
+  });
+  if (alreadyGranted) {
+    return true;
+  }
+  return chrome.permissions.request({
+    origins: [originPattern]
+  });
+}
+
 async function loadSettings() {
   const result = await chrome.storage.local.get(["apiUrl", "accessToken"]);
   apiUrlInput.value = result.apiUrl || "";
   accessTokenInput.value = result.accessToken || "";
-  if (result.apiUrl && result.accessToken) {
+  if (result.apiUrl && result.accessToken && !isTokenExpired(result.accessToken)) {
     setStatus("ready");
   } else {
     setStatus("idle");
+  }
+  if (result.accessToken && isTokenExpired(result.accessToken)) {
+    setMessage("Token appears expired. Please generate a new one.", true);
   }
 }
 
 async function saveSettings() {
   const apiUrl = normalizeApiUrl(apiUrlInput.value);
   const accessToken = accessTokenInput.value.trim();
+  if (apiUrl && !isHttpUrl(apiUrl)) {
+    setMessage("API URL must be http:// or https://", true);
+    setStatus("error");
+    return;
+  }
+  if (apiUrl) {
+    const granted = await ensureApiPermission(apiUrl);
+    if (!granted) {
+      setMessage("Host permission denied for API URL.", true);
+      setStatus("error");
+      return;
+    }
+  }
   await chrome.storage.local.set({ apiUrl, accessToken });
   setMessage("Settings saved.", false);
-  if (apiUrl && accessToken) {
+  if (accessToken && isTokenExpired(accessToken)) {
+    setStatus("idle");
+    setMessage("Token appears expired. Please generate a new one.", true);
+  } else if (apiUrl && accessToken) {
     setStatus("ready");
   } else {
     setStatus("idle");
   }
+  chrome.runtime.sendMessage({ type: "refreshStatus" });
+}
+
+async function clearToken() {
+  accessTokenInput.value = "";
+  await chrome.storage.local.set({ accessToken: "" });
+  setStatus("idle");
+  setMessage("Token cleared.", false);
   chrome.runtime.sendMessage({ type: "refreshStatus" });
 }
 
@@ -91,6 +161,11 @@ async function savePage() {
   const accessToken = accessTokenInput.value.trim();
   if (!apiUrl || !accessToken) {
     setMessage("Please configure API URL and Access Token.", true);
+    setStatus("error");
+    return;
+  }
+  if (isTokenExpired(accessToken)) {
+    setMessage("Token appears expired. Please update it.", true);
     setStatus("error");
     return;
   }
@@ -146,6 +221,12 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
 saveSettingsBtn.addEventListener("click", () => {
   saveSettings().catch(() => {
     setMessage("Failed to save settings.", true);
+  });
+});
+
+clearTokenBtn.addEventListener("click", () => {
+  clearToken().catch(() => {
+    setMessage("Failed to clear token.", true);
   });
 });
 

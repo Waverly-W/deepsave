@@ -48,15 +48,51 @@ async function setStatus(status) {
   await chrome.action.setBadgeBackgroundColor({ color: config.color });
 }
 
+function decodeJwtPayload(token) {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  try {
+    const payload = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+    return JSON.parse(atob(payload));
+  } catch (error) {
+    return null;
+  }
+}
+
+function isTokenExpired(token) {
+  if (!token) {
+    return false;
+  }
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") {
+    return false;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  return now >= payload.exp;
+}
+
 async function loadConfig() {
   const result = await chrome.storage.local.get(["apiUrl", "accessToken"]);
   const apiUrl = (result.apiUrl || "").replace(/\/$/, "");
   const accessToken = result.accessToken || "";
-  return { apiUrl, accessToken };
+  return {
+    apiUrl,
+    accessToken,
+    tokenExpired: isTokenExpired(accessToken)
+  };
 }
 
 async function setStatusFromConfig() {
-  const { apiUrl, accessToken } = await loadConfig();
+  const { apiUrl, accessToken, tokenExpired } = await loadConfig();
+  if (tokenExpired) {
+    await setStatus("error");
+    return;
+  }
   if (apiUrl && accessToken) {
     await setStatus("ready");
   } else {
@@ -80,6 +116,10 @@ async function ingestNote({ apiUrl, accessToken, url, title, content }) {
   }
   if (!isHttpUrl(url)) {
     await setStatus("idle");
+    return;
+  }
+  if (isTokenExpired(accessToken)) {
+    await setStatus("error");
     return;
   }
 
@@ -141,6 +181,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
   const config = await loadConfig();
+  if (config.tokenExpired) {
+    await setStatus("error");
+    return;
+  }
   await ingestNote({
     apiUrl: config.apiUrl,
     accessToken: config.accessToken,

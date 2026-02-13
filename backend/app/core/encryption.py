@@ -21,7 +21,10 @@ def decrypt_secret(token: str | None) -> str | None:
 
 
 def _fernet() -> Fernet:
-    secret = os.getenv("APP_SECRET_KEY", "change-me").encode("utf-8")
+    raw_secret = os.getenv("APP_SECRET_KEY")
+    if not raw_secret:
+        raise RuntimeError("APP_SECRET_KEY is required for encryption")
+    secret = raw_secret.encode("utf-8")
     digest = hashlib.sha256(secret).digest()
     key = base64.urlsafe_b64encode(digest)
     return Fernet(key)

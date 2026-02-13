@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import require_auth
 from app.core.database import get_async_session
 from app.schemas.search import SearchResponse, SearchResultItem
 from app.services.search_service import SearchService
 from app.utils.html import html_to_text
 from app.utils.text_stats import count_text_stats
 
-router = APIRouter(tags=["Search"])
+router = APIRouter(tags=["Search"], dependencies=[Depends(require_auth)])
 
 
 @router.get("/search", response_model=SearchResponse)

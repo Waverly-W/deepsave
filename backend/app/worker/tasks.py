@@ -1,7 +1,8 @@
 import asyncio
-import json
 import os
+import time
 import uuid
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -35,12 +36,15 @@ from app.utils.html import html_to_text
 from app.utils.markdown import markdown_to_html
 from app.worker.celery_app import celery_app
 
-GLOBAL_LOCK_KEY = "processing:global"
-GLOBAL_LOCK_TTL_SECONDS = int(os.getenv("PROCESSING_GLOBAL_LOCK_TTL_S", "900"))
-GLOBAL_LOCK_RETRY_SECONDS = float(os.getenv("PROCESSING_GLOBAL_LOCK_RETRY_S", "5"))
 ITEM_LOCK_TTL_SECONDS = int(os.getenv("INGEST_LOCK_TTL_S", "600"))
+ITEM_LOCK_HEARTBEAT_SECONDS = int(os.getenv("INGEST_LOCK_HEARTBEAT_S", "120"))
 TAG_CANDIDATE_LIMIT = int(os.getenv("TAG_CANDIDATE_LIMIT", "200"))
 TAG_MAX_DEPTH = int(os.getenv("TAG_MAX_DEPTH", "3"))
+AI_RESOURCE_CONCURRENCY = max(int(os.getenv("AI_RESOURCE_CONCURRENCY", "2")), 1)
+SCRAPER_RESOURCE_CONCURRENCY = max(int(os.getenv("SCRAPER_RESOURCE_CONCURRENCY", "2")), 1)
+TASK_ERROR_MAX_LEN = int(os.getenv("TASK_LOG_ERROR_MAX_LEN", "1000"))
+
+_resource_semaphores: dict[tuple[int, str], asyncio.Semaphore] = {}
 
 
 @celery_app.task(name="items.process")
@@ -58,26 +62,94 @@ def polish_item_content(item_id: str, lock_key: str | None = None) -> None:
     asyncio.run(_polish_item_content_async(item_id, lock_key))
 
 
+def _sanitize_error_message(exc: Exception) -> str:
+    message = str(exc).strip() or exc.__class__.__name__
+    return message[:TASK_ERROR_MAX_LEN]
+
+
+async def _write_task_log(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    item_id: uuid.UUID | None,
+    step_name: str,
+    status: str,
+    duration_ms: int,
+    error_message: str | None = None,
+) -> None:
+    async with session_factory() as session:
+        async with session.begin():
+            session.add(
+                TaskLog(
+                    item_id=item_id,
+                    step_name=step_name,
+                    status=status,
+                    duration_ms=duration_ms,
+                    error_message=error_message,
+                )
+            )
+
+
+def _get_resource_semaphore(name: str, limit: int) -> asyncio.Semaphore:
+    loop = asyncio.get_running_loop()
+    key = (id(loop), name)
+    semaphore = _resource_semaphores.get(key)
+    if semaphore is None:
+        semaphore = asyncio.Semaphore(limit)
+        _resource_semaphores[key] = semaphore
+    return semaphore
+
+
+def _clear_current_loop_semaphores() -> None:
+    loop_id = id(asyncio.get_running_loop())
+    for key in [item for item in _resource_semaphores if item[0] == loop_id]:
+        _resource_semaphores.pop(key, None)
+
+
+@asynccontextmanager
+async def _resource_slot(name: str, limit: int):
+    semaphore = _get_resource_semaphore(name, limit)
+    await semaphore.acquire()
+    try:
+        yield
+    finally:
+        semaphore.release()
+
+
+async def _lock_heartbeat(
+    redis,
+    lock_key: str | None,
+    stop_event: asyncio.Event,
+) -> None:
+    if not lock_key:
+        return
+    while not stop_event.is_set():
+        try:
+            await asyncio.wait_for(
+                stop_event.wait(),
+                timeout=max(ITEM_LOCK_HEARTBEAT_SECONDS, 10),
+            )
+        except asyncio.TimeoutError:
+            with suppress(Exception):
+                await redis.expire(lock_key, ITEM_LOCK_TTL_SECONDS)
+
+
 async def _process_item_async(item_id: str, lock_key: str | None) -> None:
     item_uuid = uuid.UUID(item_id)
     expected_revision = 0
     redis = get_redis()
-    global_token = str(uuid.uuid4())
-    acquired = await redis.set(
-        GLOBAL_LOCK_KEY,
-        global_token,
-        nx=True,
-        ex=GLOBAL_LOCK_TTL_SECONDS,
+    heartbeat_stop = asyncio.Event()
+    heartbeat_task = (
+        asyncio.create_task(_lock_heartbeat(redis, lock_key, heartbeat_stop))
+        if lock_key
+        else None
     )
-    if not acquired:
-        await _requeue_due_to_global_lock(item_uuid, lock_key, redis, process_item)
-        await redis.close()
-        return
-
     engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
     session_factory = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
+    started_at = time.perf_counter()
+    task_status = "success"
+    error_message: str | None = None
     try:
         item = await _load_item(session_factory, item_uuid)
         if item is None:
@@ -91,40 +163,41 @@ async def _process_item_async(item_id: str, lock_key: str | None) -> None:
             plain_text = html_to_text(content_text) or ""
             title = item.title or _title_from_text(plain_text) or item.url
             language = detect_language(plain_text, title)
-            polish = await polish_text(
-                plain_text,
-                title=title,
-                url=item.url,
-                settings=settings,
-                language=language,
-            )
-            polished_title, polished_content_text, polished_plain_text = _apply_polish_result(
-                title=title,
-                content_text=content_text,
-                plain_text=plain_text,
-                polish=polish,
-            )
-            tag_candidates = await _load_tag_candidates(
-                session_factory,
-                limit=TAG_CANDIDATE_LIMIT,
-                language=language,
-            )
-            analysis = await summarize_text(
-                polished_plain_text,
-                title=polished_title,
-                url=item.url,
-                settings=settings,
-                existing_tags=tag_candidates,
-                language=language,
-                max_tag_depth=TAG_MAX_DEPTH,
-            )
+            async with _resource_slot("ai", AI_RESOURCE_CONCURRENCY):
+                polish = await polish_text(
+                    plain_text,
+                    title=title,
+                    url=item.url,
+                    settings=settings,
+                    language=language,
+                )
+                polished_title, polished_content_text, polished_plain_text = _apply_polish_result(
+                    title=title,
+                    content_text=content_text,
+                    plain_text=plain_text,
+                    polish=polish,
+                )
+                tag_candidates = await _load_tag_candidates(
+                    session_factory,
+                    limit=TAG_CANDIDATE_LIMIT,
+                    language=language,
+                )
+                analysis = await summarize_text(
+                    polished_plain_text,
+                    title=polished_title,
+                    url=item.url,
+                    settings=settings,
+                    existing_tags=tag_candidates,
+                    language=language,
+                    max_tag_depth=TAG_MAX_DEPTH,
+                )
 
-            chunk_texts = (
-                chunk_text(polished_plain_text) if polished_plain_text else []
-            )
-            embeddings = (
-                await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
-            )
+                chunk_texts = (
+                    chunk_text(polished_plain_text) if polished_plain_text else []
+                )
+                embeddings = (
+                    await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
+                )
 
             await _save_results(
                 session_factory,
@@ -141,12 +214,13 @@ async def _process_item_async(item_id: str, lock_key: str | None) -> None:
         elif item.source_type == "image":
             title = item.title or item.url
             image_bytes = await _fetch_image_bytes(item.url)
-            description = await describe_image(image_bytes, settings=settings)
+            async with _resource_slot("ai", AI_RESOURCE_CONCURRENCY):
+                description = await describe_image(image_bytes, settings=settings)
+                chunk_texts = chunk_text(description) if description else []
+                embeddings = (
+                    await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
+                )
             palette = extract_palette(image_bytes)
-            chunk_texts = chunk_text(description) if description else []
-            embeddings = (
-                await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
-            )
             await _save_image_results(
                 session_factory,
                 item_uuid,
@@ -158,7 +232,8 @@ async def _process_item_async(item_id: str, lock_key: str | None) -> None:
                 expected_revision,
             )
         else:
-            scrape = await scrape_url(item.url, item_id=item_id)
+            async with _resource_slot("scraper", SCRAPER_RESOURCE_CONCURRENCY):
+                scrape = await scrape_url(item.url, item_id=item_id)
             content_text = scrape.content_text
             if not content_text and scrape.html:
                 content_text = trafilatura.extract(
@@ -169,40 +244,41 @@ async def _process_item_async(item_id: str, lock_key: str | None) -> None:
             content_text = markdown_to_html(content_text) if content_text else None
             plain_text = html_to_text(content_text) or ""
             language = detect_language(plain_text, title)
-            polish = await polish_text(
-                plain_text,
-                title=title,
-                url=item.url,
-                settings=settings,
-                language=language,
-            )
-            polished_title, polished_content_text, polished_plain_text = _apply_polish_result(
-                title=title,
-                content_text=content_text,
-                plain_text=plain_text,
-                polish=polish,
-            )
-            tag_candidates = await _load_tag_candidates(
-                session_factory,
-                limit=TAG_CANDIDATE_LIMIT,
-                language=language,
-            )
-            analysis = await summarize_text(
-                polished_plain_text,
-                title=polished_title,
-                url=item.url,
-                settings=settings,
-                existing_tags=tag_candidates,
-                language=language,
-                max_tag_depth=TAG_MAX_DEPTH,
-            )
+            async with _resource_slot("ai", AI_RESOURCE_CONCURRENCY):
+                polish = await polish_text(
+                    plain_text,
+                    title=title,
+                    url=item.url,
+                    settings=settings,
+                    language=language,
+                )
+                polished_title, polished_content_text, polished_plain_text = _apply_polish_result(
+                    title=title,
+                    content_text=content_text,
+                    plain_text=plain_text,
+                    polish=polish,
+                )
+                tag_candidates = await _load_tag_candidates(
+                    session_factory,
+                    limit=TAG_CANDIDATE_LIMIT,
+                    language=language,
+                )
+                analysis = await summarize_text(
+                    polished_plain_text,
+                    title=polished_title,
+                    url=item.url,
+                    settings=settings,
+                    existing_tags=tag_candidates,
+                    language=language,
+                    max_tag_depth=TAG_MAX_DEPTH,
+                )
 
-            chunk_texts = (
-                chunk_text(polished_plain_text) if polished_plain_text else []
-            )
-            embeddings = (
-                await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
-            )
+                chunk_texts = (
+                    chunk_text(polished_plain_text) if polished_plain_text else []
+                )
+                embeddings = (
+                    await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
+                )
 
             await _save_results(
                 session_factory,
@@ -217,13 +293,32 @@ async def _process_item_async(item_id: str, lock_key: str | None) -> None:
                 expected_revision,
             )
         await _mark_completed(session_factory, item_uuid, expected_revision)
-    except Exception:
+    except Exception as exc:
+        task_status = "failed"
+        error_message = _sanitize_error_message(exc)
         await _mark_failed(session_factory, item_uuid, expected_revision)
         raise
     finally:
-        await _release_global_lock(redis, global_token)
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+        with suppress(Exception):
+            await _write_task_log(
+                session_factory,
+                item_id=item_uuid,
+                step_name="process_item",
+                status=task_status,
+                duration_ms=duration_ms,
+                error_message=error_message,
+            )
         if lock_key:
-            await redis.delete(lock_key)
+            with suppress(Exception):
+                await redis.delete(lock_key)
+        if heartbeat_task is not None:
+            heartbeat_stop.set()
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
+        with suppress(Exception):
+            _clear_current_loop_semaphores()
         await redis.close()
         await engine.dispose()
 
@@ -232,22 +327,19 @@ async def _process_item_content_async(item_id: str, lock_key: str | None) -> Non
     item_uuid = uuid.UUID(item_id)
     expected_revision = 0
     redis = get_redis()
-    global_token = str(uuid.uuid4())
-    acquired = await redis.set(
-        GLOBAL_LOCK_KEY,
-        global_token,
-        nx=True,
-        ex=GLOBAL_LOCK_TTL_SECONDS,
+    heartbeat_stop = asyncio.Event()
+    heartbeat_task = (
+        asyncio.create_task(_lock_heartbeat(redis, lock_key, heartbeat_stop))
+        if lock_key
+        else None
     )
-    if not acquired:
-        await _requeue_due_to_global_lock(item_uuid, lock_key, redis, process_item_content)
-        await redis.close()
-        return
-
     engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
     session_factory = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
+    started_at = time.perf_counter()
+    task_status = "success"
+    error_message: str | None = None
     try:
         item = await _load_item(session_factory, item_uuid)
         if item is None:
@@ -265,25 +357,26 @@ async def _process_item_content_async(item_id: str, lock_key: str | None) -> Non
         title = item.title or _title_from_text(plain_text) or item.url
         settings = await _load_ai_settings(session_factory)
         language = detect_language(plain_text, title)
-        tag_candidates = await _load_tag_candidates(
-            session_factory,
-            limit=TAG_CANDIDATE_LIMIT,
-            language=language,
-        )
-        analysis = await summarize_text(
-            plain_text,
-            title=title,
-            url=item.url,
-            settings=settings,
-            existing_tags=tag_candidates,
-            language=language,
-            max_tag_depth=TAG_MAX_DEPTH,
-        )
+        async with _resource_slot("ai", AI_RESOURCE_CONCURRENCY):
+            tag_candidates = await _load_tag_candidates(
+                session_factory,
+                limit=TAG_CANDIDATE_LIMIT,
+                language=language,
+            )
+            analysis = await summarize_text(
+                plain_text,
+                title=title,
+                url=item.url,
+                settings=settings,
+                existing_tags=tag_candidates,
+                language=language,
+                max_tag_depth=TAG_MAX_DEPTH,
+            )
 
-        chunk_texts = chunk_text(plain_text) if plain_text else []
-        embeddings = (
-            await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
-        )
+            chunk_texts = chunk_text(plain_text) if plain_text else []
+            embeddings = (
+                await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
+            )
 
         await _save_results(
             session_factory,
@@ -298,13 +391,32 @@ async def _process_item_content_async(item_id: str, lock_key: str | None) -> Non
             expected_revision,
         )
         await _mark_completed(session_factory, item_uuid, expected_revision)
-    except Exception:
+    except Exception as exc:
+        task_status = "failed"
+        error_message = _sanitize_error_message(exc)
         await _mark_failed(session_factory, item_uuid, expected_revision)
         raise
     finally:
-        await _release_global_lock(redis, global_token)
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+        with suppress(Exception):
+            await _write_task_log(
+                session_factory,
+                item_id=item_uuid,
+                step_name="process_item_content",
+                status=task_status,
+                duration_ms=duration_ms,
+                error_message=error_message,
+            )
         if lock_key:
-            await redis.delete(lock_key)
+            with suppress(Exception):
+                await redis.delete(lock_key)
+        if heartbeat_task is not None:
+            heartbeat_stop.set()
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
+        with suppress(Exception):
+            _clear_current_loop_semaphores()
         await redis.close()
         await engine.dispose()
 
@@ -313,22 +425,19 @@ async def _polish_item_content_async(item_id: str, lock_key: str | None) -> None
     item_uuid = uuid.UUID(item_id)
     expected_revision = 0
     redis = get_redis()
-    global_token = str(uuid.uuid4())
-    acquired = await redis.set(
-        GLOBAL_LOCK_KEY,
-        global_token,
-        nx=True,
-        ex=GLOBAL_LOCK_TTL_SECONDS,
+    heartbeat_stop = asyncio.Event()
+    heartbeat_task = (
+        asyncio.create_task(_lock_heartbeat(redis, lock_key, heartbeat_stop))
+        if lock_key
+        else None
     )
-    if not acquired:
-        await _requeue_due_to_global_lock(item_uuid, lock_key, redis, polish_item_content)
-        await redis.close()
-        return
-
     engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
     session_factory = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
+    started_at = time.perf_counter()
+    task_status = "success"
+    error_message: str | None = None
     try:
         item = await _load_item(session_factory, item_uuid)
         if item is None:
@@ -350,39 +459,40 @@ async def _polish_item_content_async(item_id: str, lock_key: str | None) -> None
         title = item.title or _title_from_text(plain_text) or item.url
         settings = await _load_ai_settings(session_factory)
         language = detect_language(plain_text, title)
-        polish = await polish_text(
-            plain_text,
-            title=title,
-            url=item.url,
-            settings=settings,
-            language=language,
-        )
-        polished_title, polished_content_text, polished_plain_text = _apply_polish_result(
-            title=title,
-            content_text=content_text,
-            plain_text=plain_text,
-            polish=polish,
-        )
+        async with _resource_slot("ai", AI_RESOURCE_CONCURRENCY):
+            polish = await polish_text(
+                plain_text,
+                title=title,
+                url=item.url,
+                settings=settings,
+                language=language,
+            )
+            polished_title, polished_content_text, polished_plain_text = _apply_polish_result(
+                title=title,
+                content_text=content_text,
+                plain_text=plain_text,
+                polish=polish,
+            )
 
-        tag_candidates = await _load_tag_candidates(
-            session_factory,
-            limit=TAG_CANDIDATE_LIMIT,
-            language=language,
-        )
-        analysis = await summarize_text(
-            polished_plain_text,
-            title=polished_title,
-            url=item.url,
-            settings=settings,
-            existing_tags=tag_candidates,
-            language=language,
-            max_tag_depth=TAG_MAX_DEPTH,
-        )
+            tag_candidates = await _load_tag_candidates(
+                session_factory,
+                limit=TAG_CANDIDATE_LIMIT,
+                language=language,
+            )
+            analysis = await summarize_text(
+                polished_plain_text,
+                title=polished_title,
+                url=item.url,
+                settings=settings,
+                existing_tags=tag_candidates,
+                language=language,
+                max_tag_depth=TAG_MAX_DEPTH,
+            )
 
-        chunk_texts = chunk_text(polished_plain_text) if polished_plain_text else []
-        embeddings = (
-            await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
-        )
+            chunk_texts = chunk_text(polished_plain_text) if polished_plain_text else []
+            embeddings = (
+                await embed_texts(chunk_texts, settings=settings) if chunk_texts else []
+            )
 
         await _save_results(
             session_factory,
@@ -397,13 +507,32 @@ async def _polish_item_content_async(item_id: str, lock_key: str | None) -> None
             expected_revision,
         )
         await _mark_completed(session_factory, item_uuid, expected_revision)
-    except Exception:
+    except Exception as exc:
+        task_status = "failed"
+        error_message = _sanitize_error_message(exc)
         await _mark_failed(session_factory, item_uuid, expected_revision)
         raise
     finally:
-        await _release_global_lock(redis, global_token)
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+        with suppress(Exception):
+            await _write_task_log(
+                session_factory,
+                item_id=item_uuid,
+                step_name="polish_item_content",
+                status=task_status,
+                duration_ms=duration_ms,
+                error_message=error_message,
+            )
         if lock_key:
-            await redis.delete(lock_key)
+            with suppress(Exception):
+                await redis.delete(lock_key)
+        if heartbeat_task is not None:
+            heartbeat_stop.set()
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
+        with suppress(Exception):
+            _clear_current_loop_semaphores()
         await redis.close()
         await engine.dispose()
 
@@ -742,22 +871,3 @@ async def _fetch_image_bytes(url: str) -> bytes:
         response = await client.get(url)
         response.raise_for_status()
         return response.content
-
-
-async def _requeue_due_to_global_lock(
-    item_id: uuid.UUID,
-    lock_key: str | None,
-    redis,
-    task_func,
-) -> None:
-    countdown = max(int(GLOBAL_LOCK_RETRY_SECONDS), 1)
-    task = task_func.apply_async(args=[str(item_id), lock_key], countdown=countdown)
-    if lock_key:
-        payload = json.dumps({"task_id": task.id, "item_id": str(item_id)})
-        await redis.set(lock_key, payload, ex=ITEM_LOCK_TTL_SECONDS)
-
-
-async def _release_global_lock(redis, token: str) -> None:
-    current = await redis.get(GLOBAL_LOCK_KEY)
-    if current == token:
-        await redis.delete(GLOBAL_LOCK_KEY)

@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import require_auth
 from app.core.database import get_async_session
 from app.schemas.tags import TagTreeResponse
 from app.services.tags_service import TagsService
 
-router = APIRouter(prefix="/tags", tags=["Tags"])
+router = APIRouter(
+    prefix="/tags",
+    tags=["Tags"],
+    dependencies=[Depends(require_auth)],
+)
 
 
 @router.get("/tree", response_model=TagTreeResponse)

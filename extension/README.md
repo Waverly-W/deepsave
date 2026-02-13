@@ -10,14 +10,17 @@
 2. Click the settings icon (top right).
 3. Set `API URL` (example: `http://10.222.77.138:8356`).
 4. Paste the `Access Token` generated from `/settings`.
-5. Click "Save settings".
+5. Click "Save settings" and approve the host permission prompt for that API origin.
+6. If token expires or needs rotation, use "Clear token" then paste a new one.
 
 ## Usage
 - Popup: click "Save page" to ingest the current tab URL.
 - Context menu: select text, right click, choose "Save to DeepSave as Note".
 
 ## Status icon
-- Grey: idle
-- Blue: saving
-- Green: success
-- Red: error
+- Brand icon is used for all states.
+- State feedback is shown by badge text/background:
+  - idle: empty badge
+  - saving: `...`
+  - success: `OK`
+  - error: `ERR`

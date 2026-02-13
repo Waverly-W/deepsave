@@ -1,5 +1,7 @@
 import { apiUrl } from "./api";
 import type {
+  AccessTokenListResponse,
+  AccessTokenRevokeResponse,
   AccessTokenResponse,
   AiSettingsResponse,
   AiSettingsTestResponse,
@@ -297,6 +299,34 @@ export async function createAccessToken(
     throw new Error("Failed to create access token");
   }
   return (await response.json()) as AccessTokenResponse;
+}
+
+export async function listAccessTokens(
+  options: FetchOptions = {}
+): Promise<AccessTokenListResponse> {
+  const response = await fetch(apiUrl("/system/keys"), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load access tokens");
+  }
+  return (await response.json()) as AccessTokenListResponse;
+}
+
+export async function revokeAccessToken(
+  keyId: string,
+  options: FetchOptions = {}
+): Promise<AccessTokenRevokeResponse> {
+  const response = await fetch(apiUrl(`/system/keys/${keyId}`), {
+    method: "DELETE",
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to revoke access token");
+  }
+  return (await response.json()) as AccessTokenRevokeResponse;
 }
 
 export async function fetchAiSettings(

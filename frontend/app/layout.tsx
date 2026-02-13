@@ -1,20 +1,8 @@
 import type { Metadata } from "next";
-import { Newsreader, Space_Grotesk } from "next/font/google";
 
 import "./globals.css";
 import Providers from "./providers";
 import { getServerLocale } from "../lib/i18n-server";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-sans"
-});
-
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  adjustFontFallback: false
-});
 
 export const metadata: Metadata = {
   title: "DeepSave Pro",
@@ -54,7 +42,6 @@ export default function RootLayout({
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${spaceGrotesk.variable} ${newsreader.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

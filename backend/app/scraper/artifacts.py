@@ -1,8 +1,15 @@
+import os
 from pathlib import Path
 
 
-def ensure_artifact_dir(item_id: str, base_dir: str = "/data/artifacts") -> Path:
-    path = Path(base_dir) / item_id
+def resolve_artifacts_base_dir() -> Path:
+    base_dir = os.getenv("ARTIFACTS_BASE_DIR", "/data/artifacts").strip()
+    return Path(base_dir or "/data/artifacts")
+
+
+def ensure_artifact_dir(item_id: str, base_dir: str | None = None) -> Path:
+    root = Path(base_dir) if base_dir else resolve_artifacts_base_dir()
+    path = root / item_id
     path.mkdir(parents=True, exist_ok=True)
     return path
 

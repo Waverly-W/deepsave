@@ -39,6 +39,13 @@
 **api_keys**
 - id, key_hash, user_id, label, created_at
 
+**ai_settings**
+- llm_api_key_encrypted, llm_base_url, llm_model
+- summary_system_prompt, summary_user_prompt_template
+- polish_system_prompt, polish_user_prompt_template
+- vision_user_prompt
+- embedding_api_key_encrypted, embedding_base_url, embedding_model, embedding_dimensions
+
 **site_configs**
 - domain, cookies(encrypted)
 
@@ -70,3 +77,11 @@
 ## 8. 配置与密钥
 - `APP_SECRET_KEY`：AES-GCM 加密 API Key。
 - `RRF_K_CONSTANT`：默认 60，可配置。
+
+## 9. AI 设置与 Prompt 配置
+- 运行时优先级：数据库 `ai_settings` > 环境变量 > 内置默认模板。
+- Prompt 模板字段已暴露为可配置项（摘要/标签、润色、图片描述），用于系统任务执行时动态注入。
+- 配置接口：
+  - `GET /system/ai-settings`：读取当前生效配置（包含是否已保存 API Key）。
+  - `PUT /system/ai-settings`：更新模型、Key、Prompt 模板（支持部分字段 patch）。
+  - `POST /system/ai-settings/test`：测试 LLM/Embedding 连通性与延迟。

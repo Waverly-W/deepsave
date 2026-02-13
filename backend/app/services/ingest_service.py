@@ -8,9 +8,14 @@ from app.ai.router import route_url
 from app.core.redis import get_redis
 from app.repositories.item_repo import ItemRepository
 from app.utils.markdown import markdown_to_html
+from app.utils.url_safety import validate_ingest_url
 from app.worker.tasks import process_item
 
 LOCK_TTL_SECONDS = int(os.getenv("INGEST_LOCK_TTL_S", "600"))
+
+
+class IngestConflictError(ValueError):
+    """Raised when the same URL is already being processed."""
 
 
 @dataclass
@@ -32,6 +37,7 @@ class IngestService:
         content_text: str | None = None,
         title: str | None = None,
     ) -> IngestResult:
+        validate_ingest_url(url)
         normalized_url = normalize_url(url)
         lock_key = _lock_key(normalized_url)
         note_text = content_text.strip() if content_text else None
@@ -48,13 +54,13 @@ class IngestService:
                         reused=True,
                     )
                 except (json.JSONDecodeError, KeyError):
-                    raise ValueError("URL is already processing")
+                    raise IngestConflictError("URL is already processing")
 
             acquired = await self._redis.set(
                 lock_key, "pending", nx=True, ex=LOCK_TTL_SECONDS
             )
             if not acquired:
-                raise ValueError("URL is already processing")
+                raise IngestConflictError("URL is already processing")
 
             resolved_source_type = route_url(normalized_url, override=resolved_override)
             note_title = title.strip() if title and title.strip() else None

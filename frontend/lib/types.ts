@@ -42,6 +42,23 @@ export type AccessTokenResponse = {
   access_token: string;
 };
 
+export type AccessTokenItem = {
+  id: string;
+  label: string | null;
+  created_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+};
+
+export type AccessTokenListResponse = {
+  items: AccessTokenItem[];
+};
+
+export type AccessTokenRevokeResponse = {
+  id: string;
+  revoked: boolean;
+};
+
 export type AiSettingsResponse = {
   llm_base_url: string | null;
   llm_model: string | null;

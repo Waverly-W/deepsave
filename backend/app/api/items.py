@@ -16,6 +16,7 @@ from app.ai.polisher import (
     stream_chat_completion,
 )
 from app.ai.summarizer import detect_language, summarize_text
+from app.core.auth import require_auth
 from app.core.ai_settings import get_ai_settings
 from app.core.database import async_session_factory, get_async_session
 from app.core.redis import get_redis
@@ -48,10 +49,15 @@ from app.worker.tasks import (
     process_item_content,
 )
 from app.services.ingest_service import LOCK_TTL_SECONDS, _lock_key, normalize_url
-from app.services.ingest_service import IngestService
+from app.services.ingest_service import IngestConflictError, IngestService
 from app.services.items_service import ItemsService
+from app.utils.url_safety import UnsafeUrlError
 
-router = APIRouter(prefix="/items", tags=["Items"])
+router = APIRouter(
+    prefix="/items",
+    tags=["Items"],
+    dependencies=[Depends(require_auth)],
+)
 
 
 def _sse_event(event: str, data: dict) -> str:
@@ -67,13 +73,17 @@ async def ingest_item(
     service = IngestService(session)
     try:
         result = await service.ingest(
-            payload.url,
+            str(payload.url),
             payload.source_type,
             content_text=payload.content_text,
             title=payload.title,
         )
-    except ValueError as exc:
+    except UnsafeUrlError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except IngestConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return IngestResponse(task_id=result.task_id, item_id=result.item_id, reused=result.reused)
 
 

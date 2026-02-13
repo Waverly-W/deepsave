@@ -3,8 +3,9 @@
   "name": "DeepSave Pro",
   "description": "Save pages and notes to DeepSave Pro",
   "version": "0.1.0",
-  "permissions": ["storage", "contextMenus", "activeTab", "tabs"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "permissions": ["storage", "contextMenus", "activeTab", "tabs", "permissions"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "action": {
     "default_title": "DeepSave Pro",
     "default_popup": "popup.html",

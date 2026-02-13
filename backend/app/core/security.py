@@ -59,7 +59,10 @@ def decode_access_token(token: str) -> dict:
 
 
 def _jwt_secret() -> str:
-    return os.getenv("JWT_SECRET_KEY") or os.getenv("APP_SECRET_KEY", "change-me")
+    secret = os.getenv("JWT_SECRET_KEY") or os.getenv("APP_SECRET_KEY")
+    if not secret:
+        raise RuntimeError("JWT secret is not configured")
+    return secret
 
 
 def _b64url_encode(raw: bytes) -> str:

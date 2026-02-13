@@ -1,15 +1,23 @@
 import asyncio
 import os
 import time
+import uuid
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import AuthContext, require_auth
 from app.core.database import get_async_session
 from app.core.ai_settings import get_ai_settings as resolve_ai_settings
 from app.exceptions import NotFoundError
-from app.schemas.access_token import AccessTokenCreate, AccessTokenResponse
+from app.schemas.access_token import (
+    AccessTokenCreate,
+    AccessTokenItem,
+    AccessTokenListResponse,
+    AccessTokenResponse,
+    AccessTokenRevokeResponse,
+)
 from app.schemas.ai_settings import (
     AiSettingsResponse,
     AiSettingsTestRequest,
@@ -26,6 +34,7 @@ router = APIRouter(prefix="/system", tags=["System"])
 
 @router.get("/status", response_model=SystemStatus)
 async def system_status(
+    _auth: AuthContext = Depends(require_auth),
     session: AsyncSession = Depends(get_async_session),
 ) -> SystemStatus:
     service = SystemService(session)
@@ -47,18 +56,58 @@ async def init_status(
 )
 async def create_access_token(
     payload: AccessTokenCreate,
+    _auth: AuthContext = Depends(require_auth),
     session: AsyncSession = Depends(get_async_session),
 ) -> AccessTokenResponse:
     service = AccessTokenService(session)
     try:
-        token = await service.create_access_token(payload.label)
+        token = await service.create_access_token(payload.label, user_id=_auth.user_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return AccessTokenResponse(access_token=token)
 
 
+@router.get("/keys", response_model=AccessTokenListResponse)
+async def list_access_tokens(
+    _auth: AuthContext = Depends(require_auth),
+    session: AsyncSession = Depends(get_async_session),
+) -> AccessTokenListResponse:
+    service = AccessTokenService(session)
+    try:
+        keys = await service.list_access_tokens(user_id=_auth.user_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return AccessTokenListResponse(
+        items=[
+            AccessTokenItem(
+                id=key.id,
+                label=key.label,
+                created_at=key.created_at,
+                revoked_at=key.revoked_at,
+                last_used_at=key.last_used_at,
+            )
+            for key in keys
+        ]
+    )
+
+
+@router.delete("/keys/{key_id}", response_model=AccessTokenRevokeResponse)
+async def revoke_access_token(
+    key_id: uuid.UUID,
+    _auth: AuthContext = Depends(require_auth),
+    session: AsyncSession = Depends(get_async_session),
+) -> AccessTokenRevokeResponse:
+    service = AccessTokenService(session)
+    try:
+        revoked = await service.revoke_access_token(key_id, user_id=_auth.user_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return AccessTokenRevokeResponse(id=key_id, revoked=revoked)
+
+
 @router.get("/ai-settings", response_model=AiSettingsResponse)
 async def get_ai_settings(
+    _auth: AuthContext = Depends(require_auth),
     session: AsyncSession = Depends(get_async_session),
 ) -> AiSettingsResponse:
     settings = await resolve_ai_settings(session)
@@ -81,6 +130,7 @@ async def get_ai_settings(
 @router.put("/ai-settings", response_model=AiSettingsResponse)
 async def update_ai_settings(
     payload: AiSettingsUpdate,
+    _auth: AuthContext = Depends(require_auth),
     session: AsyncSession = Depends(get_async_session),
 ) -> AiSettingsResponse:
     service = AiSettingsService(session)
@@ -105,6 +155,7 @@ async def update_ai_settings(
 @router.post("/ai-settings/test", response_model=AiSettingsTestResponse)
 async def test_ai_settings(
     payload: AiSettingsTestRequest,
+    _auth: AuthContext = Depends(require_auth),
     session: AsyncSession = Depends(get_async_session),
 ) -> AiSettingsTestResponse:
     settings = await resolve_ai_settings(session)

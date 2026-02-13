@@ -12,6 +12,7 @@ def fuse_rrf(
     k: int | None = None,
 ) -> list[tuple[Item, float]]:
     k_value = _resolve_k(k)
+    type_weights = _resolve_type_weights()
     scores: dict[object, float] = {}
     items: dict[object, Item] = {}
 
@@ -19,7 +20,8 @@ def fuse_rrf(
         for rank, (item, _score) in enumerate(ranked, start=1):
             item_id = item.id
             items[item_id] = item
-            scores[item_id] = scores.get(item_id, 0.0) + 1.0 / (k_value + rank)
+            weight = type_weights.get(item.source_type, 1.0)
+            scores[item_id] = scores.get(item_id, 0.0) + (weight / (k_value + rank))
 
     def sort_key(item: Item) -> tuple[float, float, str]:
         score = scores.get(item.id, 0.0)
@@ -40,3 +42,23 @@ def _resolve_k(override: int | None) -> int:
     except ValueError:
         return 60
     return value if value > 0 else 60
+
+
+def _resolve_type_weights() -> dict[str, float]:
+    raw = os.getenv("RRF_TYPE_WEIGHTS", "")
+    weights: dict[str, float] = {}
+    for pair in raw.split(","):
+        if ":" not in pair:
+            continue
+        source_type, value = pair.split(":", 1)
+        source = source_type.strip()
+        if not source:
+            continue
+        try:
+            weight = float(value.strip())
+        except ValueError:
+            continue
+        if weight <= 0:
+            continue
+        weights[source] = weight
+    return weights

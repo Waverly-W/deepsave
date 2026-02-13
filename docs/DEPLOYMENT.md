@@ -23,10 +23,24 @@ CORS_ALLOW_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
 docker compose --profile cpu up -d
 ```
 
-4. 运行数据库迁移（首次或升级后执行）：
+4. 数据库迁移由 backend 启动时自动执行（`alembic upgrade head`）。
+   如需手动执行（排障/预检）：
 
 ```bash
 docker compose exec -T backend alembic upgrade head
+```
+
+本机直连运行（非容器）可选：
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+或在仓库根目录：
+
+```bash
+alembic -c backend/alembic.ini upgrade head
 ```
 
 5. 首次初始化：打开 `http://<host>:3000/setup`，设置管理员密码。
@@ -45,6 +59,8 @@ docker compose --profile gpu up -d
   `docker compose -f docker-compose.yml --profile cpu up -d`
 - 依赖或基础镜像变更后：  
   `docker compose up -d --build`
+- 前端静态资源（`frontend/public`）变更后：必须重建前端镜像  
+  `docker compose build frontend && docker compose up -d frontend`
 - 查看日志：  
   `docker compose logs -f backend worker beat`
 
@@ -61,7 +77,7 @@ docker compose --profile gpu up -d
 - `ALIYUN_API_KEY`：Aliyun text-embedding-v4 Key。
 - `NEXTAUTH_SECRET`：NextAuth 会话加密密钥。
 - `NEXTAUTH_URL`：前端访问地址（局域网请用实际 IP）。
-- `APP_SECRET_KEY` 或 `JWT_SECRET_KEY`：后端 JWT 密钥（默认 `change-me`，请更换）。
+- `APP_SECRET_KEY`：后端加密/JWT 主密钥，必须设置且不能使用弱值（如 `change-me`）。
 - `CORS_ALLOW_ORIGINS`：逗号分隔的允许来源列表。
 
 ### 可选（前端）
@@ -84,11 +100,21 @@ docker compose --profile gpu up -d
 - `PLAYWRIGHT_TIMEOUT_SOFT_S` / `PLAYWRIGHT_TIMEOUT_HARD_S`：Playwright 抓取超时。
 - `IMAGE_FETCH_TIMEOUT_S`：图片下载超时。
 - `INGEST_LOCK_TTL_S`：入队 URL 幂等锁 TTL（秒，默认 600）。
-- `PROCESSING_GLOBAL_LOCK_TTL_S`：全局处理锁 TTL（秒，默认 900）。
-- `PROCESSING_GLOBAL_LOCK_RETRY_S`：全局处理锁重试间隔（秒，默认 5）。
+- `INGEST_LOCK_HEARTBEAT_S`：worker 对 item 锁的续约间隔（秒，默认 120）。
+- `ARTIFACTS_BASE_DIR`：抓取产物目录（默认 `/data/artifacts`）。
+- `AUTH_ENFORCED`：是否强制业务接口鉴权（默认 `true`）。
+- `ALLOW_WEAK_SECRET_FOR_DEV`：仅本地开发允许弱密钥（默认 `false`）。
+- `SSRF_PROTECTION_MODE`：`warn|enforce`（默认 `enforce`）。
+- `INGEST_DOMAIN_ALLOWLIST`：可选，逗号分隔域名白名单。
+- `AI_RESOURCE_CONCURRENCY`：AI 处理资源并发槽位（默认 2）。
+- `SCRAPER_RESOURCE_CONCURRENCY`：抓取资源并发槽位（默认 2）。
+- `TASK_LOG_ERROR_MAX_LEN`：`task_logs.error_message` 截断长度（默认 1000）。
 
 ### 可选（后端：检索与回收）
 - `RRF_K_CONSTANT`：RRF 融合常量（默认 60）。
+- `RRF_TYPE_WEIGHTS`：按类型加权（例：`article:1.0,image:1.2,note:0.9`）。
+- `SEARCH_CACHE_TTL_S` / `SEARCH_CACHE_MAX_KEYS`：热查询缓存 TTL 与容量。
+- `EMBEDDING_CACHE_SIZE`：Embedding 本地缓存容量（0 为关闭）。
 - `RECYCLE_BIN_RETENTION_DAYS`：回收站保留天数（默认 30）。
 - `TASK_LOG_RETENTION_DAYS`：任务日志保留天数（默认 7）。
 
@@ -98,6 +124,8 @@ docker compose --profile gpu up -d
 
 ## 7. 常见问题排查
 - 502/500：先确认 `backend` 容器健康，再执行迁移 `alembic upgrade head`。
+- 本机执行 `alembic upgrade head` 报 `No 'script_location' key found`：在 `backend/` 目录执行，或使用 `alembic -c backend/alembic.ini upgrade head`。
+- 本机执行 Alembic 报 `No module named 'pgvector'`：先安装后端依赖 `cd backend && pip install -r requirements.txt`。
 - CORS 报错：确保 `CORS_ALLOW_ORIGINS` 包含前端完整地址（含端口）。
 - `[next-auth][JWT_SESSION_ERROR]`：`NEXTAUTH_SECRET` 变更或不一致，清理浏览器 Cookie 并重启前端。
 - 任务长期 pending：检查 `worker` 容器日志与 Redis 连接；确认 `ALIYUN_API_KEY` 生效。
@@ -106,3 +134,5 @@ docker compose --profile gpu up -d
 - npm 安装 `@tiptap/extension-markdown` 404：该包不在公开 npm，改用 `tiptap-markdown`。
 - worker 报错 `Future ... attached to a different loop`：避免跨事件循环复用 asyncpg 连接；确保 AI 设置读取使用任务内 session。
 - 编辑后无“待重算”：需先手动保存内容，`content_revision` 变化后才会出现待重算提示。
+- 品牌图标 404（如 `/brand/logo-mark.svg`）：确认前端镜像已包含 `public/`，执行 `docker compose build frontend && docker compose up -d frontend`。
+- 前端 hydration warning（`data-note-width`/`data-editor-text-size` 不一致）：升级到最新前端代码后重启前端；该问题由 SSR 与客户端初始偏好不一致引起，已在偏好初始化逻辑中修复。

@@ -1,19 +1,21 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { TranslationKey } from "../../lib/i18n";
 import { LANGUAGE_OPTIONS } from "../../lib/i18n";
 import { apiBaseUrl } from "../../lib/api";
 import {
   createAccessToken,
+  listAccessTokens,
   fetchAiSettings,
+  revokeAccessToken,
   testAiSettings,
   updateAiSettings
 } from "../../lib/fetchers";
 import { useI18n } from "../../lib/i18n-provider";
-import type { AiSettingsUpdate } from "../../lib/types";
+import type { AccessTokenItem, AiSettingsUpdate } from "../../lib/types";
 import {
   type EditorTextSize,
   type NoteWidth,
@@ -256,6 +258,20 @@ function normalizePromptInput(value: string): string | null {
   return trimmed ? trimmed : null;
 }
 
+function formatDateTime(value: string | null, locale: string): string {
+  if (!value) {
+    return "-";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(parsed);
+}
+
 export default function SettingsShell({ userLabel }: SettingsShellProps) {
   const { data: session } = useSession();
   const token = session?.accessToken;
@@ -271,7 +287,11 @@ export default function SettingsShell({ userLabel }: SettingsShellProps) {
   const [label, setLabel] = useState("");
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [tokenItems, setTokenItems] = useState<AccessTokenItem[]>([]);
+  const [isTokenListLoading, setIsTokenListLoading] = useState(false);
+  const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
+  const [tokenNoticeKey, setTokenNoticeKey] = useState<TranslationKey | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedCurl, setCopiedCurl] = useState(false);
   const [copyNoticeKey, setCopyNoticeKey] = useState<TranslationKey | null>(
@@ -380,6 +400,29 @@ export default function SettingsShell({ userLabel }: SettingsShellProps) {
     };
   }, [token]);
 
+  const loadTokenItems = useCallback(async () => {
+    if (!token) {
+      setTokenItems([]);
+      return;
+    }
+    setIsTokenListLoading(true);
+    try {
+      const data = await listAccessTokens({ token });
+      setTokenItems(data.items);
+      setTokenNoticeKey(null);
+    } catch {
+      setTokenNoticeKey("settings.accessToken.loadFailed");
+    } finally {
+      setIsTokenListLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadTokenItems().catch(() => {
+      setTokenNoticeKey("settings.accessToken.loadFailed");
+    });
+  }, [loadTokenItems]);
+
   const handleGenerate = async () => {
     if (!token) {
       setErrorKey("settings.error.notAuthenticated");
@@ -391,12 +434,14 @@ export default function SettingsShell({ userLabel }: SettingsShellProps) {
     setCopiedToken(false);
     setCopiedCurl(false);
     setCopyNoticeKey(null);
+    setTokenNoticeKey(null);
     try {
       const result = await createAccessToken(
         { label: label.trim() || undefined },
         { token }
       );
       setGeneratedToken(result.access_token);
+      await loadTokenItems();
     } catch {
       setErrorKey("settings.error.generateFailed");
     } finally {
@@ -468,6 +513,23 @@ export default function SettingsShell({ userLabel }: SettingsShellProps) {
       },
       () => setCopiedCurl(false)
     );
+  };
+
+  const handleRevokeToken = async (keyId: string) => {
+    if (!token || revokingTokenId) {
+      return;
+    }
+    setRevokingTokenId(keyId);
+    setTokenNoticeKey(null);
+    try {
+      await revokeAccessToken(keyId, { token });
+      await loadTokenItems();
+      setTokenNoticeKey("settings.accessToken.revokeSuccess");
+    } catch {
+      setTokenNoticeKey("settings.accessToken.revokeFailed");
+    } finally {
+      setRevokingTokenId(null);
+    }
   };
 
   const handleSaveAi = async () => {
@@ -938,6 +1000,113 @@ export default function SettingsShell({ userLabel }: SettingsShellProps) {
                       </p>
                     </div>
                   ) : null}
+
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm text-neutral-700 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs uppercase tracking-[0.25em] text-neutral-500 dark:text-neutral-400">
+                        {t("settings.accessToken.listTitle")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => loadTokenItems()}
+                        disabled={isTokenListLoading}
+                        className="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300"
+                      >
+                        {t("settings.accessToken.refresh")}
+                      </button>
+                    </div>
+
+                    {isTokenListLoading ? (
+                      <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                        {t("settings.accessToken.listLoading")}
+                      </p>
+                    ) : null}
+
+                    {!isTokenListLoading && tokenItems.length === 0 ? (
+                      <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                        {t("settings.accessToken.listEmpty")}
+                      </p>
+                    ) : null}
+
+                    {!isTokenListLoading && tokenItems.length > 0 ? (
+                      <div className="mt-3 overflow-x-auto">
+                        <table className="min-w-full text-left text-xs">
+                          <thead className="text-neutral-500 dark:text-neutral-400">
+                            <tr>
+                              <th className="py-2 pr-4 font-medium">
+                                {t("settings.accessToken.table.label")}
+                              </th>
+                              <th className="py-2 pr-4 font-medium">
+                                {t("settings.accessToken.table.createdAt")}
+                              </th>
+                              <th className="py-2 pr-4 font-medium">
+                                {t("settings.accessToken.table.lastUsedAt")}
+                              </th>
+                              <th className="py-2 pr-4 font-medium">
+                                {t("settings.accessToken.table.status")}
+                              </th>
+                              <th className="py-2 pr-0 font-medium">
+                                {t("settings.accessToken.table.actions")}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tokenItems.map((item) => {
+                              const revoked = Boolean(item.revoked_at);
+                              const isRevoking = revokingTokenId === item.id;
+                              return (
+                                <tr
+                                  key={item.id}
+                                  className="border-t border-neutral-200/70 dark:border-neutral-800/80"
+                                >
+                                  <td className="py-2 pr-4 text-neutral-800 dark:text-neutral-200">
+                                    {item.label?.trim() || t("settings.accessToken.untitled")}
+                                  </td>
+                                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                                    {formatDateTime(item.created_at, locale)}
+                                  </td>
+                                  <td className="py-2 pr-4 text-neutral-600 dark:text-neutral-300">
+                                    {formatDateTime(item.last_used_at, locale)}
+                                  </td>
+                                  <td className="py-2 pr-4">
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                        revoked
+                                          ? "border border-neutral-200 text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
+                                          : "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                      }`}
+                                    >
+                                      {revoked
+                                        ? t("settings.accessToken.status.revoked")
+                                        : t("settings.accessToken.status.active")}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 pr-0">
+                                    <button
+                                      type="button"
+                                      disabled={revoked || isRevoking}
+                                      onClick={() => handleRevokeToken(item.id)}
+                                      className="rounded-full border border-neutral-200 px-3 py-1 text-[11px] text-neutral-600 transition hover:border-rose-300 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-rose-500/40 dark:hover:text-rose-300"
+                                    >
+                                      {isRevoking
+                                        ? t("settings.accessToken.revoking")
+                                        : t("settings.accessToken.revoke")}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+
+                    {tokenNoticeKey ? (
+                      <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                        {t(tokenNoticeKey)}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 

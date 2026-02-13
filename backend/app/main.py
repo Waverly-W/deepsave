@@ -9,9 +9,11 @@ from app.api.items import router as items_router
 from app.api.search import router as search_router
 from app.api.system import router as system_router
 from app.api.tags import router as tags_router
+from app.core.startup_checks import run_startup_checks
 
 
 def create_app() -> FastAPI:
+    run_startup_checks()
     app = FastAPI(title="DeepSave Pro API")
     origins = os.getenv(
         "CORS_ALLOW_ORIGINS",
