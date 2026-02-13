@@ -1,0 +1,49 @@
+name: Deploy DeepSave
+run-name: ${{ gitea.actor }} is deploying DeepSave 🚀
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build Application
+        run: echo "Building..."
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.NAS_IP }} >> ~/.ssh/known_hosts
+
+      - name: Package source
+        run: |
+          tar \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude=".gitea" \
+            --exclude="frontend/node_modules" \
+            -czf /tmp/deepsave.tar.gz .
+
+      - name: Deploy to NAS
+        if: gitea.ref == 'refs/heads/main'
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.NAS_IP }} "mkdir -p ~/deepsave-test"
+          scp /tmp/deepsave.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.NAS_IP }}:~/deepsave-test/deepsave.tar.gz
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.NAS_IP }} '
+            set -e
+            cd ~/deepsave-test
+            tar -xzf deepsave.tar.gz
+            rm -f deepsave.tar.gz
+            docker compose -f docker-compose.yml --profile cpu up -d --build
+            docker compose ps
+          '
+

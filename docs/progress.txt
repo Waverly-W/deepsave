@@ -152,3 +152,5 @@ Phase 7 上线修复（repair.md）
 [x] 7.17.T 测试：`npm -C frontend run lint` 输出 `No ESLint warnings or errors`；`npm -C frontend run build` 再次通过
 [x] 7.18 登录态过期与 401 跳转修复（会话时长对齐 + 401 统一回登录）
 [x] 7.18.T 测试：`npm -C frontend run lint`、`cd frontend && npx tsc --noEmit`、`npm -C frontend run build` 通过；容器重建后 `docker compose --profile cpu ps` 正常，前端可启动
+[x] 7.19 新增 Gitea 部署流水线（main 分支自动部署 NAS）
+[x] 7.19.T 测试：新增 `.gitea/workflows/deploy.yml`，沿用 `SSH_KEY/NAS_IP/SSH_USER` secrets，部署命令使用 `docker compose -f docker-compose.yml --profile cpu up -d --build`
