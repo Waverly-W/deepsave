@@ -154,7 +154,7 @@ export default function ItemMarkdownEditor({
     if (previous === null || !editor) {
       return;
     }
-    editor.commands.setContent(previous, false);
+    editor.commands.setContent(previous, { emitUpdate: false });
     lastAppliedContentRef.current = previous;
     currentContentRef.current = previous;
     setIsDirty(false);
@@ -190,7 +190,7 @@ export default function ItemMarkdownEditor({
       const nextHtml = payload.content_html ?? "";
       const nextTitle = payload.title ?? "";
       if (editor) {
-        editor.commands.setContent(nextHtml, false);
+        editor.commands.setContent(nextHtml, { emitUpdate: false });
       }
       lastSavedRef.current = nextHtml;
       lastAppliedContentRef.current = nextHtml;
@@ -241,7 +241,7 @@ export default function ItemMarkdownEditor({
     streamBufferRef.current = "";
     setTypedMarkdown("");
     if (editor) {
-      editor.commands.setContent("", false);
+      editor.commands.setContent("", { emitUpdate: false });
       lastAppliedContentRef.current = "";
       currentContentRef.current = "";
       setIsDirty(false);
@@ -394,7 +394,7 @@ export default function ItemMarkdownEditor({
       return;
     }
     lastAppliedContentRef.current = nextContent;
-    editor.commands.setContent(nextContent, false);
+    editor.commands.setContent(nextContent, { emitUpdate: false });
     lastSavedRef.current = nextContent;
     currentContentRef.current = nextContent;
     setIsDirty(false);

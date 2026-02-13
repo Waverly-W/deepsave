@@ -84,7 +84,12 @@ export default function ItemStream({
         },
         { token }
       ),
-    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined
+    getNextPageParam: (lastPage) => {
+      if ("next_cursor" in lastPage) {
+        return (lastPage.next_cursor as string | null | undefined) ?? undefined;
+      }
+      return undefined;
+    }
   });
 
   const searchQuery = useInfiniteQuery({

@@ -95,7 +95,7 @@ export default function DraftNoteEditor({
     if (!editor || previous === null) {
       return;
     }
-    editor.commands.setContent(previous, false);
+    editor.commands.setContent(previous, { emitUpdate: false });
   }, [editor]);
 
   const startTyping = useCallback(() => {
@@ -172,7 +172,7 @@ export default function DraftNoteEditor({
     streamDoneRef.current = false;
     streamBufferRef.current = "";
     setTypedMarkdown("");
-    editor.commands.setContent("", false);
+    editor.commands.setContent("", { emitUpdate: false });
     startTyping();
     try {
       const response = await polishDraftStream(
@@ -213,7 +213,7 @@ export default function DraftNoteEditor({
             const nextTitle = payload?.title ?? "";
             const summary = payload?.summary ?? "";
             const tags = Array.isArray(payload?.tags) ? payload.tags : [];
-            editor.commands.setContent(nextHtml, false);
+            editor.commands.setContent(nextHtml, { emitUpdate: false });
             setTitle(nextTitle);
             setPolishedAnalysis({
               summary,

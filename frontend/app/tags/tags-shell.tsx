@@ -30,7 +30,11 @@ import {
   reprocessItemContent,
   updateItem
 } from "../../lib/fetchers";
-import { getStatusLabel, getTypeLabel } from "../../lib/i18n";
+import {
+  type TranslationKey,
+  getStatusLabel,
+  getTypeLabel
+} from "../../lib/i18n";
 import { useI18n } from "../../lib/i18n-provider";
 import type { ItemDetail, TagTreeItem, TagTreeNode } from "../../lib/types";
 import {
@@ -727,7 +731,7 @@ export default function TagsShell() {
   );
 }
 
-type TagDisplayNode = TagTreeNode & {
+type TagDisplayNode = Omit<TagTreeNode, "children"> & {
   displayName: string;
   children: TagDisplayNode[];
 };
@@ -932,7 +936,7 @@ function TagItemRow({
   onSelectItem: (id: string) => void;
   onContextMenu: (item: TagTreeItem, event: React.MouseEvent<HTMLButtonElement>) => void;
   selectedItemId: string | null;
-  t: (key: string, vars?: Record<string, string | number>) => string;
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
 }) {
   const isActive = selectedItemId === item.id;
   const paddingLeft = `${depth * 14 + 8}px`;

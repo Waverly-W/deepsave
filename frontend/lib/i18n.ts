@@ -207,6 +207,23 @@ const zh = {
   "settings.accessToken.curlCopied": "已复制 curl",
   "settings.accessToken.copyUnsupported": "此环境不支持复制，请手动选择复制。",
   "settings.accessToken.storeWarning": "请立即保存，此令牌不会再次展示。",
+  "settings.accessToken.listTitle": "已创建令牌",
+  "settings.accessToken.refresh": "刷新列表",
+  "settings.accessToken.listLoading": "令牌列表加载中...",
+  "settings.accessToken.listEmpty": "暂无已创建令牌。",
+  "settings.accessToken.table.label": "标签",
+  "settings.accessToken.table.createdAt": "创建时间",
+  "settings.accessToken.table.lastUsedAt": "最近使用",
+  "settings.accessToken.table.status": "状态",
+  "settings.accessToken.table.actions": "操作",
+  "settings.accessToken.status.active": "可用",
+  "settings.accessToken.status.revoked": "已撤销",
+  "settings.accessToken.untitled": "未命名",
+  "settings.accessToken.revoke": "撤销",
+  "settings.accessToken.revoking": "撤销中...",
+  "settings.accessToken.revokeSuccess": "令牌已撤销。",
+  "settings.accessToken.revokeFailed": "撤销失败，请重试。",
+  "settings.accessToken.loadFailed": "令牌列表加载失败。",
   "settings.ai.title": "AI 设置",
   "settings.ai.subtitle": "配置大模型与向量模型。",
   "settings.ai.llm.title": "大模型（OpenAI 兼容）",
@@ -299,7 +316,9 @@ const zh = {
   "detail.editorReprocessError": "内容重算失败，请稍后再试。"
 } as const;
 
-const en: typeof zh = {
+type TranslationDict = Record<keyof typeof zh, string>;
+
+const en: TranslationDict = {
   "meta.description": "Local-first knowledge hub",
   "common.appName": "DeepSave Pro",
   "common.admin": "Admin",
@@ -502,6 +521,23 @@ const en: typeof zh = {
   "settings.accessToken.curlCopied": "Curl copied",
   "settings.accessToken.copyUnsupported": "Copy not supported here. Please select and copy manually.",
   "settings.accessToken.storeWarning": "Store this token now. It will not be shown again.",
+  "settings.accessToken.listTitle": "Issued tokens",
+  "settings.accessToken.refresh": "Refresh",
+  "settings.accessToken.listLoading": "Loading token list...",
+  "settings.accessToken.listEmpty": "No tokens created yet.",
+  "settings.accessToken.table.label": "Label",
+  "settings.accessToken.table.createdAt": "Created at",
+  "settings.accessToken.table.lastUsedAt": "Last used",
+  "settings.accessToken.table.status": "Status",
+  "settings.accessToken.table.actions": "Actions",
+  "settings.accessToken.status.active": "Active",
+  "settings.accessToken.status.revoked": "Revoked",
+  "settings.accessToken.untitled": "Untitled",
+  "settings.accessToken.revoke": "Revoke",
+  "settings.accessToken.revoking": "Revoking...",
+  "settings.accessToken.revokeSuccess": "Token revoked.",
+  "settings.accessToken.revokeFailed": "Failed to revoke token.",
+  "settings.accessToken.loadFailed": "Failed to load token list.",
   "settings.ai.title": "AI Settings",
   "settings.ai.subtitle": "Configure your LLM and embedding models.",
   "settings.ai.llm.title": "LLM (OpenAI compatible)",
@@ -596,7 +632,7 @@ const en: typeof zh = {
   "detail.editorReprocessError": "Reprocess failed. Please try again."
 };
 
-const translations: Record<Locale, typeof zh> = {
+const translations: Record<Locale, TranslationDict> = {
   "zh-CN": zh,
   "en-US": en
 };

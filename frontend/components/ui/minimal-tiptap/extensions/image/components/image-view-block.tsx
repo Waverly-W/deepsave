@@ -260,6 +260,8 @@ export const ImageViewBlock: React.FC<NodeViewProps> = ({
                   setImageState((prev) => ({ ...prev, isZoomed: false }))
                 }
               >
+                {/* Editor node view needs direct <img> for resize/selection behavior. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   className={cn(
                     "h-auto rounded object-contain transition-shadow",

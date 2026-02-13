@@ -96,6 +96,12 @@ Phase 5 采集工具
 - 编辑保存与分析重跑解耦：新增内容/分析修订号（content_revision/analysis_revision/processing_target_revision）。
 - 详情页编辑改为手动保存（右上角“保存”按钮），保存后才提示“待重算/重算分析”。
 - 新增重跑接口 `/items/{id}/reprocess-content`，仅手动触发重算摘要+标签+向量。
+- 设置页已改为 Tab 架构：外观与语言/编辑器/Access Token/AI 配置/Prompt 管理。
+- Prompt 管理改为“分组列表 + 弹窗编辑 + 单条保存”模式，去除首层冗余提示文案与额外列表标题层级。
+- 系统任务 Prompt（摘要、润色、图片描述）已通过 `/system/ai-settings` 对外可读写，支持用户自定义模板。
+- 网页与 Chrome 扩展已接入品牌图标资产（`assets/brand-assets-1770954703023.zip`）。
+- 部署注意：前端 `public/` 静态资源变更后需重建前端镜像，否则可能出现 `/brand/*` 404。
+- 修复偏好 hydration 警告：首屏使用与 SSR 一致的默认偏好，再在挂载后同步 localStorage。
 
 Phase 6 稳定性与交付
 [x] 6.1 配置任务超时（Playwright/LLM/Embedding）
@@ -108,3 +114,39 @@ Phase 6 稳定性与交付
 [x] 6.4.T 测试：新机器按文档部署可运行
 [x] 6.5 端到端验收
 [x] 6.5.T 测试：从采集到检索的完整闭环 ≤ 15s
+
+Phase 7 上线修复（repair.md）
+[x] 7.1 P0-1 服务端统一鉴权与授权（JWT + Access Token + JWT iat 失效策略）
+[x] 7.1.T 测试：`python3 -m compileall backend/app` 通过；`items/search/tags/system(除 init-status)` 已接入 `require_auth`
+[x] 7.2 P0-2 密钥安全与启动 Fail-Fast（移除 change-me fallback）
+[x] 7.2.T 测试：新增 `startup_checks` 并在 app 启动执行；`docker-compose.yml` 改为 `${APP_SECRET_KEY?required}`
+[x] 7.3 P0-3 SSRF 与危险 URL 防护（校验协议/域名/IP 段，支持 warn|enforce）
+[x] 7.3.T 测试：`IngestRequest.url` 升级为 `AnyHttpUrl`；ingest 链路接入 `validate_ingest_url`；后端 `compileall` 通过
+[x] 7.4 P0-4 Access Token 生命周期（list/revoke/last_used_at）
+[x] 7.4.T 测试：新增迁移 `0017_api_keys_lifecycle.py` 与 `/system/keys` GET/DELETE；前端设置页已接入列表与撤销，`npm -C frontend run lint` 通过
+[x] 7.5 P0-5 抓取产物持久化（artifacts 卷 + ARTIFACTS_BASE_DIR）
+[x] 7.5.T 测试：`docker-compose.yml` 已挂载 `artifacts_data:/data/artifacts`（backend/worker）；`artifacts.py` 改为环境变量驱动
+[x] 7.6 P0-6 启动前自动迁移 + backend readiness 依赖链
+[x] 7.6.T 测试：新增 `backend/entrypoint.sh` 执行 `alembic upgrade head`；`docker compose config --quiet` 通过；backend healthcheck 指向 `/health/readiness`
+[x] 7.7 P0-7 前端 lint 门禁 + 生产镜像多阶段构建
+[x] 7.7.T 测试：`npm -C frontend run lint` 通过；`npm -C frontend run build` 通过；`frontend/Dockerfile` 切换 multi-stage + `next start`
+[x] 7.8 P1-1 队列并发模型优化（移除全局串行锁 + item 锁续约 + 资源槽位限流）
+[x] 7.8.T 测试：worker 任务去除 `processing:global` 逻辑，加入 lock heartbeat；后端 `compileall` 通过
+[x] 7.9 P1-2 可观测性补齐（liveness/readiness、队列指标、task_logs 实写）
+[x] 7.9.T 测试：`/health/readiness` 接入 DB/Redis/Celery broker 检查；`/system/status` 增加队列深度与 1h 成功率字段；worker 任务结束写入 `task_logs`
+[x] 7.10 P1-3 数据一致性修复（upsert 冲突恢复软删/归档状态）
+[x] 7.10.T 测试：`ItemRepository.upsert` 冲突更新显式重置 `is_deleted/is_archived` 与 `processing_target_revision`
+[x] 7.11 P1-4 运行策略完善（restart、资源限制、日志滚动）
+[x] 7.11.T 测试：`docker-compose.yml` 为核心服务增加 `restart: unless-stopped`、`cpus/mem_limit` 与 `json-file` 滚动策略；`docker compose config --quiet` 通过
+[x] 7.12 P2-1 扩展安全收敛（权限最小化 + Token 过期检查 + 清空入口）
+[x] 7.12.T 测试：`manifest.json` 默认 host 权限收敛为 localhost 并改为 optional host 授权；popup/background 增加 JWT 过期识别与清空 token
+[x] 7.13 P2-2 搜索与缓存优化（embedding 去重缓存 + 热查询缓存 + RRF 类型权重）
+[x] 7.13.T 测试：`embedding.py` 引入本地 LRU 缓存与同批去重；`search_service.py` 引入 TTL 查询缓存；`rrf.py` 支持 `RRF_TYPE_WEIGHTS`
+[x] 7.14 P2-3 文档一致性治理（发布一致性清单）
+[x] 7.14.T 测试：新增 `docs/CONSISTENCY_CHECKLIST.md`，覆盖文档一致性、迁移绑定与发布门禁
+[x] 7.15 前端类型债务清理（恢复 build 类型门禁）
+[x] 7.15.T 测试：`cd frontend && npx tsc --noEmit` 通过；移除 `next.config.mjs` 的 `ignoreBuildErrors` 后 `npm -C frontend run build` 通过
+[x] 7.16 续修收口（上线门禁复检 + 构建产物清理）
+[x] 7.16.T 测试：`python3 -m compileall backend/app`、`npm -C frontend run lint`、`npm -C frontend run build`、`APP_SECRET_KEY=... docker compose config --quiet` 全部通过；清理 `frontend/tsconfig.tsbuildinfo`
+[x] 7.17 前端 lint 警告清零（minimal-tiptap 图片节点）
+[x] 7.17.T 测试：`npm -C frontend run lint` 输出 `No ESLint warnings or errors`；`npm -C frontend run build` 再次通过
