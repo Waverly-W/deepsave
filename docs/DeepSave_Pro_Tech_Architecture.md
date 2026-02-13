@@ -104,12 +104,16 @@ CREATE TABLE items (
     normalized_url TEXT UNIQUE NOT NULL,
     title TEXT,
     summary TEXT,
-    content_text TEXT, -- 清洗后的纯文本
+    content_text TEXT, -- HTML 正文（可编辑，分析时提取纯文本）
+    content_format VARCHAR(20) NOT NULL DEFAULT 'html', -- html
     content_tokens TEXT, -- 分词后的正文
     cached_tags TEXT, -- 冗余标签字符串（用于模糊检索）
     source_type VARCHAR(20) NOT NULL DEFAULT 'article', -- article, image, code, note
     meta_json JSONB DEFAULT '{}'::jsonb, -- 作者、发布时间、色板等
     processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed, partial_fail
+    content_revision INTEGER DEFAULT 0,
+    analysis_revision INTEGER DEFAULT 0,
+    processing_target_revision INTEGER,
     is_archived BOOLEAN DEFAULT FALSE,
     is_deleted BOOLEAN DEFAULT FALSE,
     is_read BOOLEAN DEFAULT FALSE,
@@ -180,7 +184,7 @@ CREATE TABLE task_logs (
 │   │   │   ├── {UUID}/
 │   │   │   │   ├── content.html     # 网页 DOM Snapshot（必需）
 │   │   │   │   ├── screenshot.png   # 网页长截图（可选）
-│   │   │   │   ├── content.md       # 清洗后的 Markdown（可选）
+│   │   │   │   ├── content.html     # 清洗后的 HTML（可选）
 │   │   │   │   └── media/           # 提取出的图片附件
 │   │   │   │       ├── img_01.jpg
 └── logs/                 # 系统运行日志
@@ -211,10 +215,13 @@ Return: { "status": "pending|processing|completed|failed|partial_fail" }
 GET /items
 Query Params: cursor, limit, type, archived=false
 
+GET /items/overview
+Return: { total_count, unread_count, processing_count, stale_count, today_count, latest_created_at, top_tags[] }
+
 GET /items/{id}
 
 PATCH /items/{id}
-Body: { is_archived?, is_deleted?, is_read?, tags? }
+Body: { is_archived?, is_deleted?, is_read?, title?, content_text? }
 
 DELETE /items/{id}
 

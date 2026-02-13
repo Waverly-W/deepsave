@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Archive, RefreshCw, Trash2 } from "lucide-react";
 
 import { getStatusLabel, getTypeLabel } from "../lib/i18n";
 import { useI18n } from "../lib/i18n-provider";
@@ -218,20 +219,7 @@ export default function ItemCard({
                   onClick={() => onArchive(item)}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-xs shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${ACTION_STYLES.archive}`}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 7h-16" />
-                    <path d="M7 7v-3h10v3" />
-                    <rect x="4" y="7" width="16" height="13" rx="2" />
-                  </svg>
+                  <Archive className="h-4 w-4" aria-hidden="true" />
                   <span className="sr-only">{t("itemCard.archive")}</span>
                 </button>
               ) : null}
@@ -244,22 +232,7 @@ export default function ItemCard({
                   onClick={() => onDelete(item)}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-xs shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${ACTION_STYLES.delete}`}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M8 6v-2h8v2" />
-                    <path d="M6 6l1 14h10l1-14" />
-                    <path d="M10 11v6" />
-                    <path d="M14 11v6" />
-                  </svg>
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                   <span className="sr-only">{t("itemCard.delete")}</span>
                 </button>
               ) : null}
@@ -272,19 +245,7 @@ export default function ItemCard({
                   onClick={() => onReprocess(item)}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-xs shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${ACTION_STYLES.retry}`}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 12a9 9 0 1 1-3-6.7" />
-                    <path d="M21 3v6h-6" />
-                  </svg>
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   <span className="sr-only">{t("itemCard.reprocess")}</span>
                 </button>
               ) : null}
@@ -297,19 +258,7 @@ export default function ItemCard({
                   onClick={() => onRetry(item)}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-xs shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${ACTION_STYLES.retry}`}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 12a9 9 0 1 1-3-6.7" />
-                    <path d="M21 3v6h-6" />
-                  </svg>
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   <span className="sr-only">{retryLabel}</span>
                 </button>
               ) : null}
@@ -320,7 +269,7 @@ export default function ItemCard({
 
       <h3 className="mt-4 text-lg font-semibold text-neutral-900 dark:text-neutral-50">
         <Link
-          href={`/items/${item.id}`}
+          href={`/tags?itemId=${item.id}`}
           className="transition hover:text-emerald-600 dark:hover:text-emerald-400"
         >
           {item.title || t("common.untitled")}

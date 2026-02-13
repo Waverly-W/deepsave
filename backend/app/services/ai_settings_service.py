@@ -29,6 +29,20 @@ class AiSettingsService:
             settings.llm_base_url = _normalize_text(payload.llm_base_url)
         if "llm_model" in fields:
             settings.llm_model = _normalize_text(payload.llm_model)
+        if "summary_system_prompt" in fields:
+            settings.summary_system_prompt = _normalize_text(payload.summary_system_prompt)
+        if "summary_user_prompt_template" in fields:
+            settings.summary_user_prompt_template = _normalize_text(
+                payload.summary_user_prompt_template
+            )
+        if "polish_system_prompt" in fields:
+            settings.polish_system_prompt = _normalize_text(payload.polish_system_prompt)
+        if "polish_user_prompt_template" in fields:
+            settings.polish_user_prompt_template = _normalize_text(
+                payload.polish_user_prompt_template
+            )
+        if "vision_user_prompt" in fields:
+            settings.vision_user_prompt = _normalize_text(payload.vision_user_prompt)
         if "embedding_base_url" in fields:
             settings.embedding_base_url = _normalize_text(payload.embedding_base_url)
         if "embedding_model" in fields:

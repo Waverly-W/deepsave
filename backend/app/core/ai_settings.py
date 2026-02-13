@@ -6,6 +6,13 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.prompt_templates import (
+    DEFAULT_POLISH_SYSTEM_PROMPT,
+    DEFAULT_POLISH_USER_PROMPT_TEMPLATE,
+    DEFAULT_SUMMARY_SYSTEM_PROMPT,
+    DEFAULT_SUMMARY_USER_PROMPT_TEMPLATE,
+    DEFAULT_VISION_USER_PROMPT,
+)
 from app.core.database import async_session_factory
 from app.core.encryption import decrypt_secret
 from app.models.ai_settings import AiSettings
@@ -21,6 +28,11 @@ class AiRuntimeSettings:
     llm_api_key: str | None
     llm_base_url: str | None
     llm_model: str | None
+    summary_system_prompt: str
+    summary_user_prompt_template: str
+    polish_system_prompt: str
+    polish_user_prompt_template: str
+    vision_user_prompt: str
     embedding_api_key: str | None
     embedding_base_url: str | None
     embedding_model: str | None
@@ -46,6 +58,26 @@ async def get_ai_settings(session: AsyncSession | None = None) -> AiRuntimeSetti
         "LLM_MODEL", "OPENAI_MODEL"
     )
     llm_model = llm_model or DEFAULT_LLM_MODEL
+    summary_system_prompt = (
+        (settings.summary_system_prompt if settings else None)
+        or DEFAULT_SUMMARY_SYSTEM_PROMPT
+    )
+    summary_user_prompt_template = (
+        (settings.summary_user_prompt_template if settings else None)
+        or DEFAULT_SUMMARY_USER_PROMPT_TEMPLATE
+    )
+    polish_system_prompt = (
+        (settings.polish_system_prompt if settings else None)
+        or DEFAULT_POLISH_SYSTEM_PROMPT
+    )
+    polish_user_prompt_template = (
+        (settings.polish_user_prompt_template if settings else None)
+        or DEFAULT_POLISH_USER_PROMPT_TEMPLATE
+    )
+    vision_user_prompt = (
+        (settings.vision_user_prompt if settings else None)
+        or DEFAULT_VISION_USER_PROMPT
+    )
 
     embedding_api_key = (
         decrypt_secret(settings.embedding_api_key_encrypted) if settings else None
@@ -80,6 +112,11 @@ async def get_ai_settings(session: AsyncSession | None = None) -> AiRuntimeSetti
         llm_api_key=llm_api_key,
         llm_base_url=llm_base_url,
         llm_model=llm_model,
+        summary_system_prompt=summary_system_prompt,
+        summary_user_prompt_template=summary_user_prompt_template,
+        polish_system_prompt=polish_system_prompt,
+        polish_user_prompt_template=polish_user_prompt_template,
+        vision_user_prompt=vision_user_prompt,
         embedding_api_key=embedding_api_key,
         embedding_base_url=embedding_base_url,
         embedding_model=embedding_model,

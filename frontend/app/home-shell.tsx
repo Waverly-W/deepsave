@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 
 import { fetchItems, fetchItemsOverview } from "../lib/fetchers";
 import type { ItemRecord } from "../lib/types";
+import BottomTabBar from "../components/bottom-tab-bar";
 import SearchDropdown from "../components/search-dropdown";
 import SearchResultCard from "../components/search-result-card";
 import Sidebar from "../components/sidebar";
@@ -42,7 +43,7 @@ export default function HomeShell() {
   ];
   const overviewQuery = useQuery({
     queryKey: ["items-overview"],
-    enabled: Boolean(token) && !trimmedQuery,
+    enabled: Boolean(token),
     staleTime: 30000,
     gcTime: 120000,
     refetchOnWindowFocus: false,
@@ -50,7 +51,7 @@ export default function HomeShell() {
   });
   const recentQuery = useQuery({
     queryKey: ["items-recent"],
-    enabled: Boolean(token) && !trimmedQuery,
+    enabled: Boolean(token),
     staleTime: 30000,
     gcTime: 120000,
     refetchOnWindowFocus: false,
@@ -141,7 +142,7 @@ export default function HomeShell() {
   }, [activeIndex, results]);
 
   const selectItem = (item: ItemRecord) => {
-    router.push(`/items/${item.id}`);
+    router.push(`/tags?itemId=${item.id}`);
   };
 
   const applySuggestion = (value: string) => {
@@ -194,7 +195,8 @@ export default function HomeShell() {
       </div>
 
       <Sidebar />
-      <div className="relative mx-auto min-h-screen w-full max-w-6xl px-6 py-10 pl-20">
+      <BottomTabBar />
+      <div className="relative mx-auto min-h-screen w-full max-w-6xl px-6 pt-10 pb-[calc(2.5rem+var(--bottom-tab-height)+env(safe-area-inset-bottom))] md:py-10 md:pl-20">
         <section className="flex min-h-[70vh] flex-col">
           <div className="flex flex-1 items-center justify-center">
             <div className="w-full max-w-5xl">
@@ -230,234 +232,232 @@ export default function HomeShell() {
                   onResultsChange={setResults}
                 />
               </div>
-              {!trimmedQuery ? (
-                <div className="mt-6 space-y-6">
-                  <div className="flex flex-wrap justify-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-                    {shortcuts.map((shortcut) => (
-                      <span
-                        key={shortcut}
-                        className="rounded-full border border-neutral-200/70 bg-white/80 px-3 py-1 dark:border-neutral-800/60 dark:bg-neutral-900/60"
-                      >
-                        {shortcut}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
-                    <div className="space-y-6">
-                      <section className="rounded-3xl border border-neutral-200/70 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
-                            {t("home.statsTitle")}
-                          </p>
-                          {overviewQuery.isLoading ? (
-                            <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {t("home.overviewLoading")}
-                            </span>
-                          ) : null}
-                          {overviewQuery.isError ? (
-                            <span className="text-xs text-rose-500 dark:text-rose-300">
-                              {t("home.overviewError")}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                          {[
-                            {
-                              key: "total",
-                              label: t("home.stats.total"),
-                              value: overviewQuery.data?.total_count ?? 0
-                            },
-                            {
-                              key: "unread",
-                              label: t("home.stats.unread"),
-                              value: overviewQuery.data?.unread_count ?? 0
-                            },
-                            {
-                              key: "processing",
-                              label: t("home.stats.processing"),
-                              value: overviewQuery.data?.processing_count ?? 0
-                            },
-                            {
-                              key: "stale",
-                              label: t("home.stats.stale"),
-                              value: overviewQuery.data?.stale_count ?? 0
-                            },
-                            {
-                              key: "today",
-                              label: t("home.stats.today"),
-                              value: overviewQuery.data?.today_count ?? 0
-                            }
-                          ].map((stat) => (
-                            <div
-                              key={stat.key}
-                              className="rounded-2xl border border-neutral-200/70 bg-white/90 px-3 py-2 text-sm shadow-sm dark:border-neutral-800/60 dark:bg-neutral-950"
-                            >
-                              <p className="text-[11px] uppercase tracking-[0.25em] text-neutral-500 dark:text-neutral-400">
-                                {stat.label}
-                              </p>
-                              <p className="mt-2 text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-                                {numberFormatter.format(stat.value)}
-                              </p>
-                            </div>
-                          ))}
-                          <div className="rounded-2xl border border-neutral-200/70 bg-white/90 px-3 py-2 text-sm shadow-sm dark:border-neutral-800/60 dark:bg-neutral-950">
+              <div className="mt-6 space-y-6">
+                <div className="flex flex-wrap justify-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  {shortcuts.map((shortcut) => (
+                    <span
+                      key={shortcut}
+                      className="rounded-full border border-neutral-200/70 bg-white/80 px-3 py-1 dark:border-neutral-800/60 dark:bg-neutral-900/60"
+                    >
+                      {shortcut}
+                    </span>
+                  ))}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
+                  <div className="space-y-6">
+                    <section className="rounded-3xl border border-neutral-200/70 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
+                          {t("home.statsTitle")}
+                        </p>
+                        {overviewQuery.isLoading ? (
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {t("home.overviewLoading")}
+                          </span>
+                        ) : null}
+                        {overviewQuery.isError ? (
+                          <span className="text-xs text-rose-500 dark:text-rose-300">
+                            {t("home.overviewError")}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {[
+                          {
+                            key: "total",
+                            label: t("home.stats.total"),
+                            value: overviewQuery.data?.total_count ?? 0
+                          },
+                          {
+                            key: "unread",
+                            label: t("home.stats.unread"),
+                            value: overviewQuery.data?.unread_count ?? 0
+                          },
+                          {
+                            key: "processing",
+                            label: t("home.stats.processing"),
+                            value: overviewQuery.data?.processing_count ?? 0
+                          },
+                          {
+                            key: "stale",
+                            label: t("home.stats.stale"),
+                            value: overviewQuery.data?.stale_count ?? 0
+                          },
+                          {
+                            key: "today",
+                            label: t("home.stats.today"),
+                            value: overviewQuery.data?.today_count ?? 0
+                          }
+                        ].map((stat) => (
+                          <div
+                            key={stat.key}
+                            className="rounded-2xl border border-neutral-200/70 bg-white/90 px-3 py-2 text-sm shadow-sm dark:border-neutral-800/60 dark:bg-neutral-950"
+                          >
                             <p className="text-[11px] uppercase tracking-[0.25em] text-neutral-500 dark:text-neutral-400">
-                              {t("home.stats.latest")}
+                              {stat.label}
                             </p>
-                            <p className="mt-2 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-                              {latestSavedLabel}
+                            <p className="mt-2 text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                              {numberFormatter.format(stat.value)}
                             </p>
                           </div>
-                        </div>
-                      </section>
-
-                      <section className="rounded-3xl border border-neutral-200/70 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
-                            {t("home.recentTitle")}
+                        ))}
+                        <div className="rounded-2xl border border-neutral-200/70 bg-white/90 px-3 py-2 text-sm shadow-sm dark:border-neutral-800/60 dark:bg-neutral-950">
+                          <p className="text-[11px] uppercase tracking-[0.25em] text-neutral-500 dark:text-neutral-400">
+                            {t("home.stats.latest")}
                           </p>
-                          <Link
-                            href="/timeline"
-                            className="text-xs text-neutral-500 transition hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-300"
-                          >
-                            {t("home.viewTimeline")}
-                          </Link>
+                          <p className="mt-2 text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                            {latestSavedLabel}
+                          </p>
                         </div>
-                        <div className="mt-3 space-y-2">
-                          {recentQuery.isLoading ? (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {t("home.recentLoading")}
-                            </p>
-                          ) : null}
-                          {recentQuery.isError ? (
-                            <p className="text-xs text-rose-500 dark:text-rose-300">
-                              {t("home.recentError")}
-                            </p>
-                          ) : null}
-                          {!recentQuery.isLoading && !recentQuery.isError && recentItems.length === 0 ? (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {t("home.recentEmpty")}
-                            </p>
-                          ) : null}
-                          {recentItems.map((item) => (
-                            <SearchResultCard
-                              key={item.id}
-                              item={item}
-                              active={false}
-                              selected={false}
-                              onSelect={selectItem}
-                              variant="compact"
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    </div>
+                      </div>
+                    </section>
 
-                    <div className="space-y-6">
-                      <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                    <section className="rounded-3xl border border-neutral-200/70 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <div className="flex items-center justify-between gap-3">
                         <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
-                          {t("home.suggestedTitle")}
+                          {t("home.recentTitle")}
                         </p>
-                        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                          {t("home.searchHint")}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {suggestions.map((item) => (
+                        <Link
+                          href="/timeline"
+                          className="text-xs text-neutral-500 transition hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-300"
+                        >
+                          {t("home.viewTimeline")}
+                        </Link>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {recentQuery.isLoading ? (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {t("home.recentLoading")}
+                          </p>
+                        ) : null}
+                        {recentQuery.isError ? (
+                          <p className="text-xs text-rose-500 dark:text-rose-300">
+                            {t("home.recentError")}
+                          </p>
+                        ) : null}
+                        {!recentQuery.isLoading && !recentQuery.isError && recentItems.length === 0 ? (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {t("home.recentEmpty")}
+                          </p>
+                        ) : null}
+                        {recentItems.map((item) => (
+                          <SearchResultCard
+                            key={item.id}
+                            item={item}
+                            active={false}
+                            selected={false}
+                            onSelect={selectItem}
+                            variant="compact"
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className="space-y-6">
+                    <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
+                        {t("home.suggestedTitle")}
+                      </p>
+                      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                        {t("home.searchHint")}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {suggestions.map((item) => (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => applySuggestion(item)}
+                            className="rounded-full border border-neutral-200/70 bg-white px-3 py-1 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
+                          >
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
+                        {t("home.tagsTitle")}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {overviewQuery.isLoading ? (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {t("home.tagsLoading")}
+                          </p>
+                        ) : null}
+                        {overviewQuery.isError ? (
+                          <p className="text-xs text-rose-500 dark:text-rose-300">
+                            {t("home.tagsError")}
+                          </p>
+                        ) : null}
+                        {!overviewQuery.isLoading && !overviewQuery.isError && topTags.length === 0 ? (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {t("home.tagsEmpty")}
+                          </p>
+                        ) : null}
+                        {topTags.map((tag) => (
+                          <button
+                            key={tag.tag}
+                            type="button"
+                            onClick={() => applySuggestion(`/tag ${tag.tag}`)}
+                            className="flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white px-3 py-1 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
+                          >
+                            <span>#{tag.tag}</span>
+                            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                              {numberFormatter.format(tag.count)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
+                        {t("home.recentSearchesTitle")}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {recentSearches.length === 0 ? (
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            {t("home.recentSearchesEmpty")}
+                          </p>
+                        ) : (
+                          recentSearches.map((value) => (
                             <button
-                              key={item}
+                              key={value}
                               type="button"
-                              onClick={() => applySuggestion(item)}
+                              onClick={() => applySuggestion(value)}
                               className="rounded-full border border-neutral-200/70 bg-white px-3 py-1 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
                             >
-                              {item}
+                              {value}
                             </button>
-                          ))}
-                        </div>
-                      </section>
+                          ))
+                        )}
+                      </div>
+                    </section>
 
-                      <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
-                        <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
-                          {t("home.tagsTitle")}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {overviewQuery.isLoading ? (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {t("home.tagsLoading")}
-                            </p>
-                          ) : null}
-                          {overviewQuery.isError ? (
-                            <p className="text-xs text-rose-500 dark:text-rose-300">
-                              {t("home.tagsError")}
-                            </p>
-                          ) : null}
-                          {!overviewQuery.isLoading && !overviewQuery.isError && topTags.length === 0 ? (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {t("home.tagsEmpty")}
-                            </p>
-                          ) : null}
-                          {topTags.map((tag) => (
-                            <button
-                              key={tag.tag}
-                              type="button"
-                              onClick={() => applySuggestion(`/tag ${tag.tag}`)}
-                              className="flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white px-3 py-1 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
-                            >
-                              <span>#{tag.tag}</span>
-                              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
-                                {numberFormatter.format(tag.count)}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </section>
-
-                      <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
-                        <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
-                          {t("home.recentSearchesTitle")}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {recentSearches.length === 0 ? (
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                              {t("home.recentSearchesEmpty")}
-                            </p>
-                          ) : (
-                            recentSearches.map((value) => (
-                              <button
-                                key={value}
-                                type="button"
-                                onClick={() => applySuggestion(value)}
-                                className="rounded-full border border-neutral-200/70 bg-white px-3 py-1 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
-                              >
-                                {value}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </section>
-
-                      <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
-                        <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
-                          {t("home.quickActionsTitle")}
-                        </p>
-                        <div className="mt-3 flex flex-col gap-2">
-                          <Link
-                            href="/timeline"
-                            className="rounded-xl border border-neutral-200/70 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
-                          >
-                            {t("common.timeline")}
-                          </Link>
-                          <Link
-                            href="/settings"
-                            className="rounded-xl border border-neutral-200/70 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
-                          >
-                            {t("common.settings")}
-                          </Link>
-                        </div>
-                      </section>
-                    </div>
+                    <section className="rounded-2xl border border-neutral-200/70 bg-white/85 p-4 text-sm shadow-sm backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">
+                        {t("home.quickActionsTitle")}
+                      </p>
+                      <div className="mt-3 flex flex-col gap-2">
+                        <Link
+                          href="/timeline"
+                          className="rounded-xl border border-neutral-200/70 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
+                        >
+                          {t("common.timeline")}
+                        </Link>
+                        <Link
+                          href="/settings"
+                          className="rounded-xl border border-neutral-200/70 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-neutral-800/60 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-200"
+                        >
+                          {t("common.settings")}
+                        </Link>
+                      </div>
+                    </section>
                   </div>
                 </div>
-              ) : null}
+              </div>
             </div>
           </div>
         </section>

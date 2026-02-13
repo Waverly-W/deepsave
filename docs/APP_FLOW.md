@@ -7,14 +7,14 @@
 
 ## 2. 采集入口
 - Web 输入：在首页输入 URL/文本，选择 Auto/Article/Image/Code。
-- 浏览器扩展：Popup 点击保存；右键选中文本保存为 Note。
+- 浏览器扩展：Popup 点击保存；右上角齿轮进入设置页配置 API URL 与 Token；右键选中文本保存为 Note。
 - 剪贴板脚本：监听剪贴板 URL，调用 `/items/ingest`。
 
 ## 3. 处理管线
 1. URL 规范化与去重（`normalized_url`）。
 2. 生成 `item_id` 与 `task_id`，返回 202。
 3. Celery Worker 抓取：HTTP 优先，失败则 Playwright 兜底。
-   - Note 类型：跳过抓取，直接使用 content_text。
+   - Note 类型：跳过抓取，直接使用 content_text（HTML）。
 4. Router 识别类型 → 调用相应 AI 处理。
 5. 生成结构化字段、向量化、写入数据库。
 6. 更新 `processing_status`。
@@ -24,9 +24,9 @@
 - 成功：卡片变为可读状态；失败：展示失败原因与“重试”。
 
 ## 5. 浏览与搜索
-- 顶部搜索框：自然语言或命令（`/tag`、`/type`、`/status`、`/date`）。
-- Gallery：瀑布流（图片优先）。
-- Chat：对话式检索（复用 `/search` 结果）。
+- 首页搜索框：自然语言或命令（`/tag`、`/type`、`/status`、`/date`），结果下拉展示。
+- 首页信息区：统计概览、最近保存卡片、常用标签、最近搜索与快速入口。
+- 时间线：`/timeline` 按时间顺序浏览卡片列表。
 
 ## 6. 详情阅读
 - 去噪阅读视图 + 侧栏摘要。

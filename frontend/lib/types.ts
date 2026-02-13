@@ -11,6 +11,7 @@ export type ItemRecord = {
   content_revision: number;
   analysis_revision: number;
   processing_target_revision?: number | null;
+  content_format?: string | null;
   is_archived: boolean;
   is_deleted: boolean;
   is_read: boolean;
@@ -31,6 +32,12 @@ export type IngestResponse = {
   reused: boolean;
 };
 
+export type CreateNoteResponse = {
+  item_id: string;
+  task_id?: string | null;
+  skipped: boolean;
+};
+
 export type AccessTokenResponse = {
   access_token: string;
 };
@@ -38,6 +45,11 @@ export type AccessTokenResponse = {
 export type AiSettingsResponse = {
   llm_base_url: string | null;
   llm_model: string | null;
+  summary_system_prompt: string;
+  summary_user_prompt_template: string;
+  polish_system_prompt: string;
+  polish_user_prompt_template: string;
+  vision_user_prompt: string;
   embedding_base_url: string | null;
   embedding_model: string | null;
   embedding_dimensions: number | null;
@@ -49,6 +61,11 @@ export type AiSettingsUpdate = {
   llm_api_key?: string | null;
   llm_base_url?: string | null;
   llm_model?: string | null;
+  summary_system_prompt?: string | null;
+  summary_user_prompt_template?: string | null;
+  polish_system_prompt?: string | null;
+  polish_user_prompt_template?: string | null;
+  vision_user_prompt?: string | null;
   embedding_api_key?: string | null;
   embedding_base_url?: string | null;
   embedding_model?: string | null;
@@ -78,6 +95,23 @@ export type SearchResponse = {
 export type TagCount = {
   tag: string;
   count: number;
+};
+
+export type TagTreeItem = {
+  id: string;
+  title: string | null;
+  updated_at: string;
+  is_read: boolean;
+  source_type: string;
+};
+
+export type TagTreeNode = {
+  id: number;
+  name: string;
+  path: string;
+  depth: number;
+  children: TagTreeNode[];
+  items: TagTreeItem[];
 };
 
 export type ItemsOverview = {

@@ -65,6 +65,11 @@ async def get_ai_settings(
     return AiSettingsResponse(
         llm_base_url=settings.llm_base_url,
         llm_model=settings.llm_model,
+        summary_system_prompt=settings.summary_system_prompt,
+        summary_user_prompt_template=settings.summary_user_prompt_template,
+        polish_system_prompt=settings.polish_system_prompt,
+        polish_user_prompt_template=settings.polish_user_prompt_template,
+        vision_user_prompt=settings.vision_user_prompt,
         embedding_base_url=settings.embedding_base_url,
         embedding_model=settings.embedding_model,
         embedding_dimensions=settings.embedding_dimensions,
@@ -84,6 +89,11 @@ async def update_ai_settings(
     return AiSettingsResponse(
         llm_base_url=settings.llm_base_url,
         llm_model=settings.llm_model,
+        summary_system_prompt=settings.summary_system_prompt,
+        summary_user_prompt_template=settings.summary_user_prompt_template,
+        polish_system_prompt=settings.polish_system_prompt,
+        polish_user_prompt_template=settings.polish_user_prompt_template,
+        vision_user_prompt=settings.vision_user_prompt,
         embedding_base_url=settings.embedding_base_url,
         embedding_model=settings.embedding_model,
         embedding_dimensions=settings.embedding_dimensions,

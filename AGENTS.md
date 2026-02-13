@@ -53,22 +53,40 @@ No test framework or coverage targets are defined yet. When tests are added, doc
 Commit history shows short, sentence-case subjects (e.g., `Initial commit: DeepSave Pro foundation`). Keep commits concise and descriptive; use a brief subject and optional detail after a colon.
 PRs should summarize the documentation changes, list any related issues or decisions, and update all affected docs (PRD, UX stories, architecture, or tech stack) for consistency.
 
-## 本次会话总结（变更 / 问题 / 注意事项）
-### 关键变更
-- 后端新增 `content_revision / analysis_revision / processing_target_revision`，用于解耦“编辑保存”与“分析重跑”，避免旧任务覆盖新内容。
-- 编辑保存策略改为**手动保存**：有改动即在详情页右上角显示“保存”按钮，点击后才写入内容。
-- 新增 `POST /items/{id}/reprocess-content`，由手动触发分析重跑（摘要+标签+向量）。
-- 前端列表/详情增加“待重算/重算分析”提示与入口（依赖 revision 差值判断）。
-- Tiptap Markdown 编辑器接入，改用 `tiptap-markdown` 扩展。
+## Session Summary (Changes / Issues / Notes)
+### Key Changes
+- Added `content_revision / analysis_revision / processing_target_revision` to the backend to decouple “edit save” and “analysis rerun,” preventing old tasks from overwriting new content.
+- Changed the edit save strategy to **manual save**: when there are changes, a “Save” button appears in the top-right of the detail page, and content is written only after clicking it.
+- Added `POST /items/{id}/reprocess-content`, which manually triggers analysis rerun (summary + tags + vectors).
+- Added “pending recalculation/recalculate analysis” prompts and entry points in frontend list/detail views (based on revision difference checks).
+- Integrated the Tiptap Markdown editor, switching to the `tiptap-markdown` extension.
+- Refactored the homepage to centered search + dropdown results, added a left icon sidebar and `/timeline` timeline.
+- Added overview stats, recent cards, frequently used tags, recent searches, and quick entry points on the homepage; added `GET /items/overview`.
+- Redesigned the extension Popup: added icons and style improvements, moved API configuration to the settings page with a gear entry point.
+- Replaced the detail editor with `minimal-tiptap` (shadcn) and unified content storage as HTML (`content_format=html`).
+- Moved save/reprocess actions into the editor toolbar as icon buttons; “analysis outdated” now uses toast instead of a persistent badge.
+- Added metadata card on the detail page; moved type/status/read state/open original/time into it.
+- Added editable title on the detail page (auto-resize, blur to save, Esc to cancel).
+- Added settings for note area width and editor text size (3 levels each), persisted via localStorage and applied via CSS variables.
+- Added mobile layout: sidebar becomes bottom tab navigation; detail page secondary info uses collapsible cards.
 
-### 已遇到问题
-- NextAuth 可能出现 `[next-auth][error][JWT_SESSION_ERROR]`，通常是 `NEXTAUTH_SECRET` 变更或不一致导致。
-- npm 安装 `@tiptap/extension-markdown` 404（不在公开 npm），需改用 `tiptap-markdown`。
-- worker 曾出现 `Future attached to a different loop`，原因是跨事件循环复用 asyncpg 连接。
-- 局域网访问时 CORS / API BASE URL 配置不一致导致前端请求失败或 502/500。
-- 自动保存逻辑导致状态混乱与内容未保存，已改为手动保存。
+### Issues Encountered
+- NextAuth may show `[next-auth][error][JWT_SESSION_ERROR]`, usually caused by `NEXTAUTH_SECRET` being changed or inconsistent.
+- `npm` installation of `@tiptap/extension-markdown` returns 404 (not on public npm), so `tiptap-markdown` must be used.
+- The worker previously hit `Future attached to a different loop`, caused by reusing asyncpg connections across event loops.
+- During LAN access, inconsistent CORS / API BASE URL configuration caused frontend request failures or 502/500 errors.
+- Auto-save logic caused state confusion and unsaved content; it has been changed to manual save.
+- `/items/overview` initially returned 500 (Postgres SRF in WHERE); fixed by expanding tags via subquery and rebuilding the backend image.
+- Radix Tooltip requires `TooltipProvider`; missing provider causes runtime error.
+- Dropdown triggers can break if toolbar buttons do not forward refs or use non-button nodes.
+- Tailwind `text-[var(--x)]` is treated as color; use `text-[length:var(--x)]` for font size.
+- Mobile editor overflow requires `min-w-0` on containers and `overflow-wrap:anywhere` on ProseMirror.
 
-### 注意事项
-- 编辑保存只提升 `content_revision`，不应改动 `processing_status`；重跑由手动按钮触发。
-- 迁移后需运行 `alembic upgrade head`，并重建/重启 backend+worker。
-- 列表“待重算”依赖 `content_revision > analysis_revision`，保存成功后才会出现。
+### Notes
+- Edit save should only increment `content_revision` and should not modify `processing_status`; rerun is triggered by the manual button.
+- After migration, run `alembic upgrade head`, then rebuild/restart backend+worker.
+- The list “pending recalculation” depends on `content_revision > analysis_revision`, and appears only after a successful save.
+- For new APIs or frontend changes, run `docker compose build` + `up -d` to ensure containers load the latest images.
+- Communicate with Chinese, Thinking with English.
+- Bottom tab navigation should reserve safe-area padding to avoid covering content.
+- UI preferences are managed via a top-level provider; avoid per-page local state to prevent resets on navigation.

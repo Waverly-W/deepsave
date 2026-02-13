@@ -1,5 +1,6 @@
 "use client";
 
+import BottomTabBar from "../../components/bottom-tab-bar";
 import ItemStream from "../../components/item-stream";
 import Sidebar from "../../components/sidebar";
 import { useI18n } from "../../lib/i18n-provider";
@@ -17,7 +18,8 @@ export default function TimelineShell() {
       </div>
 
       <Sidebar />
-      <div className="relative mx-auto min-h-screen w-full max-w-6xl px-6 py-10 pl-20">
+      <BottomTabBar />
+      <div className="relative mx-auto min-h-screen w-full max-w-6xl px-6 pt-10 pb-[calc(2.5rem+var(--bottom-tab-height)+env(safe-area-inset-bottom))] md:py-10 md:pl-20">
         <section className="flex min-w-0 flex-1 flex-col gap-6">
           <header className="space-y-2">
             <p className="text-xs uppercase tracking-[0.35em] text-neutral-500 dark:text-neutral-400">

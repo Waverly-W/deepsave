@@ -4,16 +4,19 @@ import type {
   AiSettingsResponse,
   AiSettingsTestResponse,
   AiSettingsUpdate,
+  CreateNoteResponse,
   IngestResponse,
   ItemDetail,
   ItemsResponse,
   ItemsOverview,
-  SearchResponse
+  SearchResponse,
+  TagTreeNode
 } from "./types";
 
 type FetchOptions = {
   token?: string;
   keepalive?: boolean;
+  signal?: AbortSignal;
 };
 
 export async function fetchItems(
@@ -89,6 +92,24 @@ export async function fetchItemsOverview(
   return (await response.json()) as ItemsOverview;
 }
 
+export async function fetchTagTree(
+  options: FetchOptions = {},
+  includeArchived = true
+): Promise<{ tree: TagTreeNode[] }> {
+  const url = new URL(apiUrl("/tags/tree"));
+  if (!includeArchived) {
+    url.searchParams.set("include_archived", "false");
+  }
+  const response = await fetch(url.toString(), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load tag tree");
+  }
+  return (await response.json()) as { tree: TagTreeNode[] };
+}
+
 export async function fetchItemDetail(
   itemId: string,
   options: FetchOptions = {}
@@ -110,6 +131,7 @@ export async function updateItem(
     is_deleted?: boolean;
     is_read?: boolean;
     content_text?: string | null;
+    content_format?: string | null;
     title?: string | null;
   },
   options: FetchOptions = {}
@@ -143,6 +165,33 @@ export async function reprocessItemContent(
     throw new Error("Failed to reprocess item content");
   }
   return (await response.json()) as { task_id: string; item_id: string };
+}
+
+export async function polishItemContent(
+  itemId: string,
+  options: FetchOptions = {}
+): Promise<{ task_id: string; item_id: string }> {
+  const response = await fetch(apiUrl(`/items/${itemId}/polish-content`), {
+    method: "POST",
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to polish item content");
+  }
+  return (await response.json()) as { task_id: string; item_id: string };
+}
+
+export async function polishItemContentStream(
+  itemId: string,
+  options: FetchOptions = {}
+): Promise<Response> {
+  return fetch(apiUrl(`/items/${itemId}/polish-now`), {
+    method: "POST",
+    headers: authHeaders(options.token),
+    cache: "no-store",
+    signal: options.signal
+  });
 }
 
 export async function requeueItem(
@@ -183,6 +232,50 @@ export async function ingestItem(
     throw new Error("Failed to ingest item");
   }
   return (await response.json()) as IngestResponse;
+}
+
+export async function createNote(
+  payload: {
+    title?: string | null;
+    content_html: string;
+    summary?: string | null;
+    tags?: string[] | null;
+    skip_queue?: boolean;
+  },
+  options: FetchOptions = {}
+): Promise<CreateNoteResponse> {
+  const response = await fetch(apiUrl("/items/create-note"), {
+    method: "POST",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error("Failed to create note");
+  }
+  return (await response.json()) as CreateNoteResponse;
+}
+
+export async function polishDraftStream(
+  payload: {
+    title?: string | null;
+    content_html: string;
+  },
+  options: FetchOptions = {}
+): Promise<Response> {
+  return fetch(apiUrl("/items/polish-draft"), {
+    method: "POST",
+    headers: {
+      ...authHeaders(options.token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+    signal: options.signal
+  });
 }
 
 export async function createAccessToken(

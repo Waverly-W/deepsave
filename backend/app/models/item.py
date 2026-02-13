@@ -20,6 +20,9 @@ class Item(Base):
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_tokens: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_format: Mapped[str] = mapped_column(
+        String(20), server_default=text("'html'"), nullable=False
+    )
     content_search_vector: Mapped[str | None] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('simple', coalesce(content_tokens, ''))", persisted=True),

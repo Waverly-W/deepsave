@@ -19,6 +19,7 @@ class ItemRepository:
         source_type: str = "article",
         title: str | None = None,
         content_text: str | None = None,
+        content_format: str | None = None,
     ) -> Item:
         values: dict[str, object] = {
             "url": url,
@@ -30,6 +31,7 @@ class ItemRepository:
         if content_text is not None:
             values["content_text"] = content_text
             values["content_revision"] = 1
+            values["content_format"] = content_format or "html"
 
         update_values: dict[str, object] = {
             "url": url,
@@ -42,6 +44,7 @@ class ItemRepository:
         if content_text is not None:
             update_values["content_text"] = content_text
             update_values["content_revision"] = Item.content_revision + 1
+            update_values["content_format"] = content_format or "html"
 
         stmt = (
             insert(Item)

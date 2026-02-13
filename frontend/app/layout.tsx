@@ -18,7 +18,16 @@ const newsreader = Newsreader({
 
 export const metadata: Metadata = {
   title: "DeepSave Pro",
-  description: "Local-first knowledge hub"
+  description: "Local-first knowledge hub",
+  icons: {
+    icon: [
+      { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/favicon-48.png", sizes: "48x48", type: "image/png" }
+    ],
+    shortcut: "/brand/favicon-32.png",
+    apple: [{ url: "/brand/pwa-192.png", sizes: "192x192", type: "image/png" }]
+  }
 };
 
 const themeScript = `

@@ -8,6 +8,7 @@ from app.api.health import router as health_router
 from app.api.items import router as items_router
 from app.api.search import router as search_router
 from app.api.system import router as system_router
+from app.api.tags import router as tags_router
 
 
 def create_app() -> FastAPI:
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(items_router)
     app.include_router(search_router)
+    app.include_router(tags_router)
     return app
 
 

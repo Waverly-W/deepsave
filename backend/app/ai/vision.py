@@ -8,6 +8,7 @@ from io import BytesIO
 import colorgram
 import httpx
 
+from app.ai.prompt_templates import DEFAULT_VISION_USER_PROMPT
 from app.core.ai_settings import AiRuntimeSettings, get_ai_settings
 DEFAULT_DESCRIPTION = "No description generated."
 DEFAULT_PALETTE_COUNT = 5
@@ -35,6 +36,7 @@ async def describe_image(
     data_url = _to_data_url(image_bytes)
     if not data_url:
         return DEFAULT_DESCRIPTION
+    user_prompt = settings.vision_user_prompt or DEFAULT_VISION_USER_PROMPT
 
     payload = {
         "model": settings.vision_model or "gpt-4o-mini",
@@ -42,7 +44,7 @@ async def describe_image(
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Describe the image in detail."},
+                    {"type": "text", "text": user_prompt},
                     {"type": "image_url", "image_url": {"url": data_url}},
                 ],
             }

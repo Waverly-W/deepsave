@@ -26,7 +26,7 @@ DeepSave Pro 的核心设计哲学是 “Invisible Input, Tangible Output”（�
 
 - 桌面端：MVP 以浏览器扩展与剪贴板脚本为主；托盘图标为后续愿景。
 - 状态：扩展图标显示就绪/成功/失败状态；剪贴板脚本以通知提示。
-- 交互：点击扩展 -> 弹出极简浮窗 -> 显示“已识别 URL” -> 一键归档。
+- 交互：点击扩展 -> 弹出极简浮窗 -> 显示“已识别 URL” -> 一键归档；右上角齿轮进入设置页配置 API URL 与 Token。
 - 移动端：MVP 不做原生适配；预留标准化 API 供快捷方式或未来分享入口接入。
 
 **状态与反馈（与任务状态一致）**  
@@ -37,17 +37,22 @@ DeepSave Pro 的核心设计哲学是 “Invisible Input, Tangible Output”（�
 
 #### B. 第二大脑仪表盘 (The Brain Dashboard)
 
-这是 Web 端的主页，不是枯燥的列表，而是动态的知识流。
+这是 Web 端的主页，搜索是唯一主入口，信息密度集中在输入框下方。
 
-- 顶部 (The Recall Widget)
-  - Random(1)：随机抽取一条 > 30 天未访问的内容。
-  - History(1)：去年今日（如有）。
-- 主体 (The Stream)
-  - 混合排版：类似于 Pinterest 的瀑布流。
-  - 智能卡片
-    - 文章：显示 AI 总结的 Title + 3 个关键 Bullet Points + 阅读时长。
-    - 图片：大图展示 + AI 提取的色板 (Color Palette) + 氛围标签（#忧郁 #雨天）。
-    - 代码：显示语言标签 + 关键片段预览。
+- 侧栏 (Icon-only Sidebar)
+  - 左侧固定：主页 / 时间线 / 设置。
+- 搜索 (Recall-first)
+  - 单一输入框居中，支持自然语言与命令。
+  - 结果在输入框下方下拉列表展示。
+  - 键盘交互：↑↓ 选择，Enter 打开。
+- 主页信息区 (At-a-glance)
+  - 概览统计：总卡片 / 未读 / 处理中 / 待重算 / 今日新增 / 最近保存。
+  - 最近保存：标题列表（点击进入详情）。
+  - 常用标签：点击即填充 `/tag <name>`。
+  - 最近搜索：本地记录，点击即可复用。
+  - 快速入口：时间线与设置。
+- 时间线 (Timeline)
+  - `/timeline` 按创建时间顺序浏览卡片列表。
 
 **搜索输入（单一输入框）**  
 - 自然语言：直接检索（混合检索）。  
@@ -58,7 +63,7 @@ DeepSave Pro 的核心设计哲学是 “Invisible Input, Tangible Output”（�
   - `/date <YYYY-MM-DD>`：按日期  
 
 **分页与加载**  
-- 列表：无限滚动（cursor=created_at，limit=20）。  
+- 列表：时间线无限滚动（cursor=created_at，limit=20）。  
 - 排序：默认最新；用户切换排序后记录到 localStorage。  
 
 #### C. 沉浸阅读室 (The Deep Reader)

@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.schemas.search import SearchResponse, SearchResultItem
 from app.services.search_service import SearchService
+from app.utils.html import html_to_text
 from app.utils.text_stats import count_text_stats
 
 router = APIRouter(tags=["Search"])
@@ -21,7 +22,8 @@ async def search(
 
     items = []
     for item, score in results:
-        word_count, char_count = count_text_stats(item.content_text)
+        plain_text = html_to_text(item.content_text)
+        word_count, char_count = count_text_stats(plain_text)
         items.append(
             SearchResultItem.model_validate(item, from_attributes=True).model_copy(
                 update={

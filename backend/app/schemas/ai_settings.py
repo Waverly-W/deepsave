@@ -6,6 +6,11 @@ from pydantic import BaseModel, Field
 class AiSettingsResponse(BaseModel):
     llm_base_url: str | None = None
     llm_model: str | None = None
+    summary_system_prompt: str
+    summary_user_prompt_template: str
+    polish_system_prompt: str
+    polish_user_prompt_template: str
+    vision_user_prompt: str
     embedding_base_url: str | None = None
     embedding_model: str | None = None
     embedding_dimensions: int | None = None
@@ -17,6 +22,11 @@ class AiSettingsUpdate(BaseModel):
     llm_api_key: str | None = Field(default=None)
     llm_base_url: str | None = None
     llm_model: str | None = None
+    summary_system_prompt: str | None = None
+    summary_user_prompt_template: str | None = None
+    polish_system_prompt: str | None = None
+    polish_user_prompt_template: str | None = None
+    vision_user_prompt: str | None = None
     embedding_api_key: str | None = Field(default=None)
     embedding_base_url: str | None = None
     embedding_model: str | None = None

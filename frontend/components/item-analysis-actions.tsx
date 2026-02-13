@@ -1,7 +1,10 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ToolbarButton } from "@/components/ui/minimal-tiptap/components/toolbar-button";
+import { Loader2, RotateCw } from "lucide-react";
+import { toast } from "sonner";
 
 import { reprocessItemContent } from "../lib/fetchers";
 import { useI18n } from "../lib/i18n-provider";
@@ -25,11 +28,11 @@ export default function ItemAnalysisActions({
   const token = tokenProp ?? session?.accessToken;
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
   const [localContentRevision, setLocalContentRevision] =
     useState(contentRevision);
   const [localAnalysisRevision, setLocalAnalysisRevision] =
     useState(analysisRevision);
+  const shownStaleToastRef = useRef(false);
 
   const isFailed = ["failed", "partial_fail"].includes(processingStatus);
   const isWorking = ["pending", "processing"].includes(processingStatus);
@@ -40,6 +43,19 @@ export default function ItemAnalysisActions({
     setLocalContentRevision(contentRevision);
     setLocalAnalysisRevision(analysisRevision);
   }, [analysisRevision, contentRevision]);
+
+  useEffect(() => {
+    if (isStale && !shownStaleToastRef.current) {
+      toast.info(t("detail.analysisOutdated"), {
+        id: `analysis-outdated-${itemId}`
+      });
+      shownStaleToastRef.current = true;
+      return;
+    }
+    if (!isStale) {
+      shownStaleToastRef.current = false;
+    }
+  }, [isStale, itemId, t]);
 
   useEffect(() => {
     const handleSaved = (event: Event) => {
@@ -55,6 +71,29 @@ export default function ItemAnalysisActions({
     };
   }, [itemId]);
 
+  useEffect(() => {
+    const handlePolished = (event: Event) => {
+      const detail = (event as CustomEvent).detail as {
+        itemId?: string;
+        contentRevision?: number;
+        analysisRevision?: number;
+      };
+      if (detail?.itemId !== itemId) {
+        return;
+      }
+      if (typeof detail.contentRevision === "number") {
+        setLocalContentRevision(detail.contentRevision);
+      }
+      if (typeof detail.analysisRevision === "number") {
+        setLocalAnalysisRevision(detail.analysisRevision);
+      }
+    };
+    window.addEventListener("deepsave:item-polished", handlePolished);
+    return () => {
+      window.removeEventListener("deepsave:item-polished", handlePolished);
+    };
+  }, [itemId]);
+
   if (!isStale && !isFailed) {
     return null;
   }
@@ -63,36 +102,36 @@ export default function ItemAnalysisActions({
     if (!token || busy || isWorking) {
       return;
     }
-    setError(false);
     setBusy(true);
     try {
       await reprocessItemContent(itemId, { token });
       setLocalAnalysisRevision((prev) => Math.max(prev, localContentRevision));
+      window.dispatchEvent(
+        new CustomEvent("deepsave:item-reprocess", { detail: { itemId } })
+      );
     } catch (err) {
-      setError(true);
+      toast.error(t("detail.editorReprocessError"), {
+        id: `analysis-reprocess-error-${itemId}`,
+      });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
-      {isStale ? (
-        <span className="rounded-full border border-amber-200/70 bg-amber-50 px-3 py-1 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-          {t("detail.analysisOutdated")}
-        </span>
-      ) : null}
-      <button
-        type="button"
+    <div className="flex items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+      <ToolbarButton
+        tooltip={busy || isWorking ? t("detail.reprocessing") : t("detail.reprocess")}
+        aria-label={busy || isWorking ? t("detail.reprocessing") : t("detail.reprocess")}
         onClick={handleReprocess}
         disabled={busy || isWorking}
-        className="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-600 transition hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
       >
-        {busy || isWorking ? t("detail.reprocessing") : t("detail.reprocess")}
-      </button>
-      {error ? (
-        <span className="text-rose-500">{t("detail.editorReprocessError")}</span>
-      ) : null}
+        {busy || isWorking ? (
+          <Loader2 className="animate-spin" />
+        ) : (
+          <RotateCw />
+        )}
+      </ToolbarButton>
     </div>
   );
 }

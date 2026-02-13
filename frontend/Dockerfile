@@ -8,6 +8,7 @@ RUN npm ci
 COPY app /app/app
 COPY components /app/components
 COPY lib /app/lib
+COPY public /app/public
 COPY middleware.ts /app/middleware.ts
 COPY next-auth.d.ts /app/next-auth.d.ts
 COPY next.config.mjs tsconfig.json next-env.d.ts postcss.config.js tailwind.config.ts /app/

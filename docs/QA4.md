@@ -102,7 +102,8 @@ B. 数据模型与生命周期 (Data Model)
 | normalized_url | Text | Unique, Not Null | 清洗后的 URL (去参数/Hash)，用于去重 |
 | title | Text | Nullable | 标题 |
 | summary | Text | Nullable | 摘要 |
-| content_text | Text | Nullable | 纯文本正文 (用于展示) |
+| content_text | Text | Nullable | HTML 正文 (用于展示/编辑，分析时提纯文本) |
+| content_format | String | Not Null, Default 'html' | 正文格式 (html) |
 | content_tokens | Text | Nullable | 分词后的文本 (用于 FTS) |
 | source_type | Varchar(20) | Not Null, Default 'article' | enum: article, image, code, note |
 | meta_json | JSONB | Default {} | 存作者、发布时间、色板等 |

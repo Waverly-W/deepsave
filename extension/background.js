@@ -1,40 +1,40 @@
 const STATUS_CONFIG = {
   idle: {
     icon: {
-      16: "icons/grey-16.png",
-      32: "icons/grey-32.png"
+      16: "icons/brand-16.png",
+      32: "icons/brand-32.png"
     },
     badge: "",
     color: "#9ca3af"
   },
   ready: {
     icon: {
-      16: "icons/blue-16.png",
-      32: "icons/blue-32.png"
+      16: "icons/brand-16.png",
+      32: "icons/brand-32.png"
     },
     badge: "",
     color: "#3b82f6"
   },
   saving: {
     icon: {
-      16: "icons/blue-16.png",
-      32: "icons/blue-32.png"
+      16: "icons/brand-16.png",
+      32: "icons/brand-32.png"
     },
     badge: "...",
     color: "#3b82f6"
   },
   success: {
     icon: {
-      16: "icons/green-16.png",
-      32: "icons/green-32.png"
+      16: "icons/brand-16.png",
+      32: "icons/brand-32.png"
     },
     badge: "OK",
     color: "#10b981"
   },
   error: {
     icon: {
-      16: "icons/red-16.png",
-      32: "icons/red-32.png"
+      16: "icons/brand-16.png",
+      32: "icons/brand-32.png"
     },
     badge: "ERR",
     color: "#ef4444"

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import NotFoundError
 from app.ai.tokenizer import tokenize_text
+from app.utils.html import html_to_text
 from app.models.item import Item
 from app.repositories.item_repo import ItemRepository
 
@@ -67,6 +68,7 @@ class ItemsService:
         is_deleted: bool | None = None,
         is_read: bool | None = None,
         content_text: str | None = None,
+        content_format: str | None = None,
         title: str | None = None,
     ) -> Item:
         item = await self.get_item(item_id)
@@ -79,10 +81,14 @@ class ItemsService:
             updates["is_read"] = is_read
         if title is not None:
             updates["title"] = title
+        if content_format is not None:
+            updates["content_format"] = content_format
         if content_text is not None and content_text != item.content_text:
             updates["content_text"] = content_text
-            updates["content_tokens"] = tokenize_text(content_text)
+            plain_text = html_to_text(content_text)
+            updates["content_tokens"] = tokenize_text(plain_text)
             updates["content_revision"] = (item.content_revision or 0) + 1
+            updates["content_format"] = content_format or "html"
         if not updates:
             return item
         return await self._items.update(item, **updates)

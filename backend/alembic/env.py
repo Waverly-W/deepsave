@@ -2,16 +2,28 @@ import asyncio
 import os
 import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-# Ensure /app is on the import path for Alembic runs inside the container.
-if "/app" not in sys.path:
-    sys.path.append("/app")
+# Ensure app package can be imported in both local and container runs.
+project_root = Path(__file__).resolve().parent.parent
+for candidate in ("/app", str(project_root)):
+    if candidate not in sys.path:
+        sys.path.append(candidate)
 
-import app.models  # noqa: F401
+try:
+    import app.models  # noqa: F401
+except ModuleNotFoundError as exc:
+    if exc.name == "pgvector":
+        raise RuntimeError(
+            "Missing dependency 'pgvector'. Install backend requirements first "
+            "(cd backend && pip install -r requirements.txt), then run "
+            "'alembic upgrade head' again."
+        ) from exc
+    raise
 from app.models.base import Base
 
 config = context.config

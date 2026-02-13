@@ -7,7 +7,7 @@
 | 项目名称 | DeepSave Pro（内部代号：SecondBrain-Hybrid） |
 | 版本 | v1.1 (Tech Stack Update) |
 | 状态 | 已对齐（Aligned to QA1-4） |
-| 最后更新 | 2026-02-07 |
+| 最后更新 | 2026-02-09 |
 | 文档作者 | AI Product Manager |
 
 ## 1. 引言 (Introduction)
@@ -64,6 +64,7 @@
 | F-IN-01 | 剪贴板监听（Desktop） | 后台静默运行，识别剪贴板中的 URL 或图片，弹窗提示“一键归档”。 | P0 |
 | F-IN-02 | 自适应爬虫（Smart Scraper） | 策略升级：<br/>1. Primary：使用轻量级 HTTP 库（如 Trafilatura/Goose）快速提取正文。<br/>2. Fallback：若提取失败或检测到强动态渲染（SPA），自动唤起 Headless Browser（Playwright）进行兜底渲染与抓取。 | P0 |
 | F-IN-03 | 移动端捷径 | 提供 iOS 快捷指令或 Telegram/微信 Bot 接口，转发即存入（Phase 2+）。 | P2 |
+| F-IN-04 | 扩展设置入口 | 扩展弹窗右上角齿轮进入设置页配置 API URL / Token。 | P0 |
 
 ### 5.2 模块二：智能路由与处理 (The Brain & Router)
 
@@ -95,9 +96,12 @@
 | ID | 功能点 | 描述 | 优先级 |
 | --- | --- | --- | --- |
 | F-UI-01 | 现代化前端架构 | 采用 Next.js（App Router）+ React；UI 组件库使用 shadcn/ui（基于 Radix UI + Tailwind CSS），确保极简美学与高可访问性。 | P0 |
-| F-UI-02 | 双模态视图 | Chat 模式（指令/问答）+ Gallery 模式（瀑布流/卡片网格）。 | P0 |
+| F-UI-02 | 主页与时间线 | 主页以搜索为中心；时间线按创建时间浏览卡片列表。 | P0 |
 | F-UI-03 | 混合搜索 | 标题/标签模糊匹配（pg_trgm）+ 正文检索（tsvector + jieba）+ 语义向量（pgvector）+ RRF 融合。 | P0 |
-| F-UI-04 | 每日回顾 | 首页 Widget：“历史上的今天”、“被遗忘的角落”。 | P1 |
+| F-UI-04 | 主页概览 | 统计概览、最近卡片、常用标签、最近搜索与快速入口。 | P0 |
+| F-UI-05 | 左侧侧栏 | 图标化入口（主页/时间线/设置）。 | P0 |
+| F-UI-06 | 键盘导航 | 搜索下拉支持 ↑↓ 选择、Enter 打开。 | P0 |
+| F-UI-07 | 每日回顾 | 首页 Widget：“历史上的今天”、“被遗忘的角落”。 | P1 |
 
 ## 6. 非功能性需求 (Non-Functional Requirements)
 

@@ -7,6 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from app.ai.router import route_url
 from app.core.redis import get_redis
 from app.repositories.item_repo import ItemRepository
+from app.utils.markdown import markdown_to_html
 from app.worker.tasks import process_item
 
 LOCK_TTL_SECONDS = int(os.getenv("INGEST_LOCK_TTL_S", "600"))
@@ -34,6 +35,7 @@ class IngestService:
         normalized_url = normalize_url(url)
         lock_key = _lock_key(normalized_url)
         note_text = content_text.strip() if content_text else None
+        note_html = markdown_to_html(note_text) if note_text else None
         resolved_override = source_type or ("note" if note_text else None)
         try:
             existing = await self._redis.get(lock_key)
@@ -67,7 +69,8 @@ class IngestService:
                 normalized_url=normalized_url,
                 source_type=resolved_source_type,
                 title=note_title if resolved_source_type == "note" else None,
-                content_text=note_text if resolved_source_type == "note" else None,
+                content_text=note_html if resolved_source_type == "note" else None,
+                content_format="html" if resolved_source_type == "note" else None,
             )
 
             task = process_item.delay(str(item.id), lock_key)

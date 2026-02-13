@@ -21,8 +21,9 @@
 ## 3. 关键数据表（MVP）
 **items**
 - id, url, normalized_url, title, summary, content_text
-- content_tokens, source_type, meta_json
-- processing_status, is_archived, is_deleted, is_read
+- content_tokens, cached_tags, source_type, meta_json
+- processing_status, content_revision, analysis_revision, processing_target_revision
+- is_archived, is_deleted, is_read
 - created_at, updated_at
 
 **tags / item_tags**
@@ -63,6 +64,9 @@
 - 前端：NextAuth 仅做 Session 容器。
 - Access Token：32位随机 hex；DB 存 SHA-256。
 
-## 7. 配置与密钥
+## 7. 主页概览接口
+- `GET /items/overview`：返回统计与标签聚合（总量、未读、处理中、待重算、今日新增、最近保存、Top tags）。
+
+## 8. 配置与密钥
 - `APP_SECRET_KEY`：AES-GCM 加密 API Key。
 - `RRF_K_CONSTANT`：默认 60，可配置。
