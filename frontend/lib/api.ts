@@ -1,5 +1,5 @@
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:8356";
-const DEFAULT_API_PORT = "8356";
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:10156";
+const DEFAULT_API_PORT = "10156";
 
 export function apiBaseUrl(): string {
   const publicBase = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "";

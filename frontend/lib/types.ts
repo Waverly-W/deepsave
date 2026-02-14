@@ -98,6 +98,17 @@ export type AiSettingsTestResponse = {
   embedding_latency_ms?: number | null;
 };
 
+export type AiSettingsTestRequest = {
+  target: "all" | "llm" | "embedding";
+  llm_api_key?: string | null;
+  llm_base_url?: string | null;
+  llm_model?: string | null;
+  embedding_api_key?: string | null;
+  embedding_base_url?: string | null;
+  embedding_model?: string | null;
+  embedding_dimensions?: number | null;
+};
+
 export type ItemsResponse = {
   items: ItemRecord[];
   next_cursor: string | null;

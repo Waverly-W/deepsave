@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -45,18 +44,17 @@ class AiRuntimeSettings:
 async def get_ai_settings(session: AsyncSession | None = None) -> AiRuntimeSettings:
     settings = await _load_settings(session)
 
-    llm_api_key = decrypt_secret(settings.llm_api_key_encrypted) if settings else None
-    llm_api_key = llm_api_key or _env_value("LLM_API_KEY", "OPENAI_API_KEY")
-
-    llm_base_url = (settings.llm_base_url if settings else None) or _env_value(
-        "LLM_BASE_URL",
-        "OPENAI_BASE_URL",
-        "OPENAI_API_BASE",
+    stored_llm_api_key = decrypt_secret(settings.llm_api_key_encrypted) if settings else None
+    stored_embedding_api_key = (
+        decrypt_secret(settings.embedding_api_key_encrypted) if settings else None
     )
 
-    llm_model = (settings.llm_model if settings else None) or _env_value(
-        "LLM_MODEL", "OPENAI_MODEL"
-    )
+    embedding_api_key = stored_embedding_api_key
+    # Keep in-settings fallback only: if llm key is empty, reuse embedding key from settings.
+    llm_api_key = stored_llm_api_key or embedding_api_key
+
+    llm_base_url = settings.llm_base_url if settings else None
+    llm_model = settings.llm_model if settings else None
     llm_model = llm_model or DEFAULT_LLM_MODEL
     summary_system_prompt = (
         (settings.summary_system_prompt if settings else None)
@@ -79,34 +77,18 @@ async def get_ai_settings(session: AsyncSession | None = None) -> AiRuntimeSetti
         or DEFAULT_VISION_USER_PROMPT
     )
 
-    embedding_api_key = (
-        decrypt_secret(settings.embedding_api_key_encrypted) if settings else None
-    )
-    embedding_api_key = embedding_api_key or _env_value("ALIYUN_API_KEY")
-
-    embedding_base_url = (settings.embedding_base_url if settings else None) or _env_value(
-        "ALIYUN_EMBEDDING_BASE_URL"
-    )
+    embedding_base_url = settings.embedding_base_url if settings else None
     embedding_base_url = embedding_base_url or DEFAULT_EMBEDDING_BASE_URL
 
-    embedding_model = (settings.embedding_model if settings else None) or _env_value(
-        "ALIYUN_EMBEDDING_MODEL"
-    )
+    embedding_model = settings.embedding_model if settings else None
     embedding_model = embedding_model or DEFAULT_EMBEDDING_MODEL
 
     embedding_dimensions = settings.embedding_dimensions if settings else None
-    if embedding_dimensions is None:
-        env_dimensions = _env_value("ALIYUN_EMBEDDING_DIMENSIONS")
-        if env_dimensions:
-            try:
-                embedding_dimensions = int(env_dimensions)
-            except ValueError:
-                embedding_dimensions = None
     embedding_dimensions = embedding_dimensions or DEFAULT_EMBEDDING_DIMENSIONS
 
-    vision_api_key = _env_value("VISION_API_KEY") or llm_api_key
-    vision_base_url = _env_value("VISION_BASE_URL") or llm_base_url
-    vision_model = _env_value("VISION_MODEL") or llm_model
+    vision_api_key = llm_api_key
+    vision_base_url = llm_base_url
+    vision_model = llm_model
 
     return AiRuntimeSettings(
         llm_api_key=llm_api_key,
@@ -135,11 +117,3 @@ async def _load_settings(session: AsyncSession | None) -> AiSettings | None:
 
     result = await session.execute(select(AiSettings).limit(1))
     return result.scalar_one_or_none()
-
-
-def _env_value(*keys: str) -> str | None:
-    for key in keys:
-        value = os.getenv(key)
-        if value:
-            return value
-    return None

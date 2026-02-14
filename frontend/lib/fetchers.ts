@@ -5,6 +5,7 @@ import type {
   AccessTokenRevokeResponse,
   AccessTokenResponse,
   AiSettingsResponse,
+  AiSettingsTestRequest,
   AiSettingsTestResponse,
   AiSettingsUpdate,
   CreateNoteResponse,
@@ -363,7 +364,7 @@ export async function updateAiSettings(
 }
 
 export async function testAiSettings(
-  payload: { target: "all" | "llm" | "embedding" },
+  payload: AiSettingsTestRequest,
   options: FetchOptions = {}
 ): Promise<AiSettingsTestResponse> {
   const response = await fetch(apiUrl("/system/ai-settings/test"), {

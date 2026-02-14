@@ -154,3 +154,9 @@ Phase 7 上线修复（repair.md）
 [x] 7.18.T 测试：`npm -C frontend run lint`、`cd frontend && npx tsc --noEmit`、`npm -C frontend run build` 通过；容器重建后 `docker compose --profile cpu ps` 正常，前端可启动
 [x] 7.19 新增 Gitea 部署流水线（main 分支自动部署 NAS）
 [x] 7.19.T 测试：新增 `.gitea/workflows/deploy.yml`，沿用 `SSH_KEY/NAS_IP/SSH_USER` secrets，部署命令使用 `docker compose -f docker-compose.yml --profile cpu up -d --build`
+[x] 7.20 AI key 回退修复（LLM key 缺失时复用 embedding/Aliyun key）
+[x] 7.20.T 测试：`backend/app/core/ai_settings.py` 增加 `llm_api_key` 回退链路（`llm -> env llm -> embedding -> ALIYUN_API_KEY`）；`python3 -m compileall backend/app` 通过
+[x] 7.21 AI 配置改为仅设置来源 + Compose 取消 APP_SECRET_KEY 必填插值
+[x] 7.21.T 测试：`backend/app/core/ai_settings.py` 移除环境变量兜底（仅使用 DB 设置与默认模型参数）；`docker-compose.yml` 改为 `APP_SECRET_KEY` 本地默认值；`python3 -m compileall backend/app` 与 `docker compose config --quiet` 通过
+[x] 7.22 AI 连接测试链路修复（测试支持未保存输入 + LLM 测试严格校验）
+[x] 7.22.T 测试：`/system/ai-settings/test` 新增临时覆盖字段（key/base/model/dimensions）并在测试时生效；`_test_llm` 增加 `raise_for_status()` 与返回体校验；`docker compose --profile cpu build backend frontend` 通过；容器内接口验证显示“无覆盖=missing_api_key、有覆盖=401/真实结果”

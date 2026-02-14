@@ -2,14 +2,18 @@ import asyncio
 import os
 import time
 import uuid
+from dataclasses import replace
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import AuthContext, require_auth
+from app.core.ai_settings import (
+    AiRuntimeSettings,
+    get_ai_settings as resolve_ai_settings,
+)
 from app.core.database import get_async_session
-from app.core.ai_settings import get_ai_settings as resolve_ai_settings
 from app.exceptions import NotFoundError
 from app.schemas.access_token import (
     AccessTokenCreate,
@@ -159,21 +163,88 @@ async def test_ai_settings(
     session: AsyncSession = Depends(get_async_session),
 ) -> AiSettingsTestResponse:
     settings = await resolve_ai_settings(session)
+    effective_settings = _apply_test_overrides(settings, payload)
     response = AiSettingsTestResponse()
 
     if payload.target in {"all", "llm"}:
-        ok, error, latency = await _test_llm(settings)
+        ok, error, latency = await _test_llm(effective_settings)
         response.llm_ok = ok
         response.llm_error = error
         response.llm_latency_ms = latency
 
     if payload.target in {"all", "embedding"}:
-        ok, error, latency = await _test_embedding(settings)
+        ok, error, latency = await _test_embedding(effective_settings)
         response.embedding_ok = ok
         response.embedding_error = error
         response.embedding_latency_ms = latency
 
     return response
+
+
+def _apply_test_overrides(
+    settings: AiRuntimeSettings, payload: AiSettingsTestRequest
+) -> AiRuntimeSettings:
+    fields = payload.model_fields_set
+
+    llm_api_key = (
+        _normalize_optional_text(payload.llm_api_key)
+        if "llm_api_key" in fields
+        else settings.llm_api_key
+    )
+    embedding_api_key = (
+        _normalize_optional_text(payload.embedding_api_key)
+        if "embedding_api_key" in fields
+        else settings.embedding_api_key
+    )
+    if not llm_api_key:
+        llm_api_key = embedding_api_key
+
+    llm_base_url = (
+        _normalize_optional_text(payload.llm_base_url)
+        if "llm_base_url" in fields
+        else settings.llm_base_url
+    )
+    llm_model = (
+        _normalize_optional_text(payload.llm_model)
+        if "llm_model" in fields
+        else settings.llm_model
+    )
+    embedding_base_url = (
+        _normalize_optional_text(payload.embedding_base_url)
+        if "embedding_base_url" in fields
+        else settings.embedding_base_url
+    )
+    embedding_model = (
+        _normalize_optional_text(payload.embedding_model)
+        if "embedding_model" in fields
+        else settings.embedding_model
+    )
+    embedding_dimensions = (
+        payload.embedding_dimensions
+        if "embedding_dimensions" in fields
+        else settings.embedding_dimensions
+    )
+
+    return replace(
+        settings,
+        llm_api_key=llm_api_key,
+        llm_base_url=llm_base_url,
+        llm_model=llm_model,
+        embedding_api_key=embedding_api_key,
+        embedding_base_url=embedding_base_url,
+        embedding_model=embedding_model,
+        embedding_dimensions=embedding_dimensions,
+        vision_api_key=llm_api_key,
+        vision_base_url=llm_base_url,
+        vision_model=llm_model,
+    )
+
+
+def _normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed if trimmed else None
 
 
 async def _test_llm(settings) -> tuple[bool, str | None, int | None]:
@@ -203,12 +274,19 @@ async def _test_llm(settings) -> tuple[bool, str | None, int | None]:
     start = time.perf_counter()
     try:
         async with httpx.AsyncClient(timeout=hard_timeout) as client:
-            await asyncio.wait_for(
+            response = await asyncio.wait_for(
                 client.post(endpoint, json=payload, headers=headers),
                 timeout=soft_timeout,
             )
+            response.raise_for_status()
+            data = response.json()
     except Exception as exc:  # noqa: BLE001
         return False, str(exc), None
+
+    choices = data.get("choices", [])
+    if not choices:
+        return False, "no_completion_data", None
+
     latency_ms = int((time.perf_counter() - start) * 1000)
     return True, None, latency_ms
 

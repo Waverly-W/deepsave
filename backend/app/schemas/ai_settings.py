@@ -35,6 +35,13 @@ class AiSettingsUpdate(BaseModel):
 
 class AiSettingsTestRequest(BaseModel):
     target: Literal["all", "llm", "embedding"] = "all"
+    llm_api_key: str | None = Field(default=None)
+    llm_base_url: str | None = None
+    llm_model: str | None = None
+    embedding_api_key: str | None = Field(default=None)
+    embedding_base_url: str | None = None
+    embedding_model: str | None = None
+    embedding_dimensions: int | None = Field(default=None, ge=1, le=4096)
 
 
 class AiSettingsTestResponse(BaseModel):

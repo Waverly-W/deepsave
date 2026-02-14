@@ -15,7 +15,11 @@ import {
   updateAiSettings
 } from "../../lib/fetchers";
 import { useI18n } from "../../lib/i18n-provider";
-import type { AccessTokenItem, AiSettingsUpdate } from "../../lib/types";
+import type {
+  AccessTokenItem,
+  AiSettingsTestRequest,
+  AiSettingsUpdate
+} from "../../lib/types";
 import {
   type EditorTextSize,
   type NoteWidth,
@@ -600,7 +604,41 @@ export default function SettingsShell({ userLabel }: SettingsShellProps) {
   const handleTestAi = async (target: "llm" | "embedding") => {
     setAiTesting((prev) => ({ ...prev, [target]: true }));
     try {
-      const result = await testAiSettings({ target }, { token });
+      const payload: AiSettingsTestRequest = { target };
+      const llmApiKey = aiForm.llmApiKey.trim();
+      const embeddingApiKey = aiForm.embeddingApiKey.trim();
+      const llmBaseUrl = aiForm.llmBaseUrl.trim();
+      const llmModel = aiForm.llmModel.trim();
+      const embeddingBaseUrl = aiForm.embeddingBaseUrl.trim();
+      const embeddingModel = aiForm.embeddingModel.trim();
+      const embeddingDimsRaw = aiForm.embeddingDimensions.trim();
+
+      if (llmApiKey) {
+        payload.llm_api_key = llmApiKey;
+      }
+      if (embeddingApiKey) {
+        payload.embedding_api_key = embeddingApiKey;
+      }
+      if (llmBaseUrl) {
+        payload.llm_base_url = llmBaseUrl;
+      }
+      if (llmModel) {
+        payload.llm_model = llmModel;
+      }
+      if (embeddingBaseUrl) {
+        payload.embedding_base_url = embeddingBaseUrl;
+      }
+      if (embeddingModel) {
+        payload.embedding_model = embeddingModel;
+      }
+      if (embeddingDimsRaw) {
+        const parsed = Number(embeddingDimsRaw);
+        if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 4096) {
+          payload.embedding_dimensions = parsed;
+        }
+      }
+
+      const result = await testAiSettings(payload, { token });
       if (target === "llm") {
         const ok = Boolean(result.llm_ok);
         const ms = result.llm_latency_ms;
