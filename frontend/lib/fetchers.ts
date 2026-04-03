@@ -13,6 +13,9 @@ import type {
   ItemDetail,
   ItemsResponse,
   ItemsOverview,
+  RelationGraphMode,
+  RelationGraphResponse,
+  TagGraphResponse,
   SearchResponse,
   TagTreeNode
 } from "./types";
@@ -112,6 +115,86 @@ export async function fetchTagTree(
     throw buildApiError(response, "Failed to load tag tree");
   }
   return (await response.json()) as { tree: TagTreeNode[] };
+}
+
+export async function fetchTagGraph(
+  params: {
+    centerTag: string;
+    maxNeighbors?: number;
+    minWeight?: number;
+    includeArchived?: boolean;
+    days?: number | null;
+  },
+  options: FetchOptions = {}
+): Promise<TagGraphResponse> {
+  const url = new URL(apiUrl("/tags/graph"));
+  url.searchParams.set("center_tag", params.centerTag);
+  if (params.maxNeighbors !== undefined) {
+    url.searchParams.set("max_neighbors", String(params.maxNeighbors));
+  }
+  if (params.minWeight !== undefined) {
+    url.searchParams.set("min_weight", String(params.minWeight));
+  }
+  if (params.includeArchived !== undefined) {
+    url.searchParams.set(
+      "include_archived",
+      params.includeArchived ? "true" : "false"
+    );
+  }
+  if (params.days !== undefined && params.days !== null) {
+    url.searchParams.set("days", String(params.days));
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw buildApiError(response, "Failed to load tag graph");
+  }
+  return (await response.json()) as TagGraphResponse;
+}
+
+export async function fetchRelationGraph(
+  params: {
+    mode: RelationGraphMode;
+    includeArchived?: boolean;
+    days?: number | null;
+    maxNodes?: number;
+    maxEdges?: number;
+    minShared?: number;
+  },
+  options: FetchOptions = {}
+): Promise<RelationGraphResponse> {
+  const url = new URL(apiUrl("/tags/network"));
+  url.searchParams.set("mode", params.mode);
+  if (params.includeArchived !== undefined) {
+    url.searchParams.set(
+      "include_archived",
+      params.includeArchived ? "true" : "false"
+    );
+  }
+  if (params.days !== undefined && params.days !== null) {
+    url.searchParams.set("days", String(params.days));
+  }
+  if (params.maxNodes !== undefined) {
+    url.searchParams.set("max_nodes", String(params.maxNodes));
+  }
+  if (params.maxEdges !== undefined) {
+    url.searchParams.set("max_edges", String(params.maxEdges));
+  }
+  if (params.minShared !== undefined) {
+    url.searchParams.set("min_shared", String(params.minShared));
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: authHeaders(options.token),
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw buildApiError(response, "Failed to load relation graph");
+  }
+  return (await response.json()) as RelationGraphResponse;
 }
 
 export async function fetchItemDetail(

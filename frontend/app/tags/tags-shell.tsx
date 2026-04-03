@@ -24,6 +24,7 @@ import ItemEditorFallback from "../../components/item-editor-fallback";
 import ItemTitleEditor from "../../components/item-title-editor";
 import Sidebar from "../../components/sidebar";
 import DraftNoteEditor from "../../components/draft-note-editor";
+import TagNeighborhoodGraph from "../../components/tag-neighborhood-graph";
 import {
   fetchItemDetail,
   fetchTagTree,
@@ -139,6 +140,7 @@ export default function TagsShell() {
   const isLoadingDetail = Boolean(selectedItemId && detailQuery.isLoading);
   const lines = summaryLines(item?.summary ?? null);
   const tags = item?.cached_tags ? item.cached_tags.split(" ").filter(Boolean) : [];
+  const primaryTag = tags[0] ?? null;
   const palette = Array.isArray(item?.meta_json?.palette)
     ? (item?.meta_json.palette as string[]).slice(0, 6)
     : [];
@@ -532,6 +534,18 @@ export default function TagsShell() {
                       </details>
                     ) : null}
 
+                    <details className="details-reset group rounded-3xl border border-neutral-200/70 bg-white/80 shadow-lg backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
+                      <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-xs uppercase tracking-[0.3em] text-neutral-500 dark:text-neutral-400">
+                        {t("detail.tagGraphTitle")}
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-neutral-200 text-neutral-400 transition group-open:rotate-180 dark:border-neutral-800">
+                          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                      </summary>
+                      <div className="px-5 pb-5">
+                        <TagNeighborhoodGraph centerTag={primaryTag} />
+                      </div>
+                    </details>
+
                     {palette.length > 0 ? (
                       <details className="details-reset group rounded-3xl border border-neutral-200/70 bg-white/80 shadow-lg backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-900/70">
                         <summary className="flex cursor-pointer items-center justify-between px-5 py-4 text-xs uppercase tracking-[0.3em] text-neutral-500 dark:text-neutral-400">
@@ -650,6 +664,15 @@ export default function TagsShell() {
                       </div>
                     </div>
                   ) : null}
+
+                  <div className="border-b border-neutral-200/70 px-5 py-4 dark:border-neutral-800/60">
+                    <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 dark:text-neutral-400">
+                      {t("detail.tagGraphTitle")}
+                    </p>
+                    <div className="mt-4">
+                      <TagNeighborhoodGraph centerTag={primaryTag} />
+                    </div>
+                  </div>
 
                   {palette.length > 0 ? (
                     <div className="px-5 py-4">

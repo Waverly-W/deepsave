@@ -142,6 +142,53 @@ export type TagTreeNode = {
   items: TagTreeItem[];
 };
 
+export type TagGraphNode = {
+  id: string;
+  label: string;
+  count: number;
+  is_center: boolean;
+};
+
+export type TagGraphEdge = {
+  source: string;
+  target: string;
+  co_count: number;
+  weight: number;
+};
+
+export type TagGraphResponse = {
+  center_tag: string;
+  node_count: number;
+  edge_count: number;
+  nodes: TagGraphNode[];
+  edges: TagGraphEdge[];
+};
+
+export type RelationGraphMode = "tag" | "item";
+
+export type RelationGraphNode = {
+  id: string;
+  label: string;
+  node_type: "tag" | "item";
+  count: number;
+};
+
+export type RelationGraphEdge = {
+  id: string;
+  source: string;
+  target: string;
+  edge_type: "hierarchy" | "co_doc" | "shared_tag";
+  shared_count: number;
+};
+
+export type RelationGraphResponse = {
+  mode: RelationGraphMode;
+  node_count: number;
+  edge_count: number;
+  nodes: RelationGraphNode[];
+  edges: RelationGraphEdge[];
+};
+
 export type ItemsOverview = {
   total_count: number;
   unread_count: number;

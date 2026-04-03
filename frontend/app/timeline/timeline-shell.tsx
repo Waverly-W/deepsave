@@ -1,12 +1,32 @@
 "use client";
 
+import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+
 import BottomTabBar from "../../components/bottom-tab-bar";
 import ItemStream from "../../components/item-stream";
 import Sidebar from "../../components/sidebar";
 import { useI18n } from "../../lib/i18n-provider";
 
+function resolveTimelineQuery(rawQuery: string): string {
+  const trimmed = rawQuery.trim();
+  if (!trimmed) {
+    return "";
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith("/tag ")) {
+    return trimmed.slice(5).trim();
+  }
+  return trimmed;
+}
+
 export default function TimelineShell() {
   const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const query = useMemo(
+    () => resolveTimelineQuery(searchParams.get("q") ?? ""),
+    [searchParams]
+  );
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
@@ -29,7 +49,7 @@ export default function TimelineShell() {
               {t("timeline.heading")}
             </h1>
           </header>
-          <ItemStream query="" view="chat" />
+          <ItemStream query={query} view="chat" />
         </section>
       </div>
     </main>
