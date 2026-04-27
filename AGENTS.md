@@ -10,6 +10,8 @@ Current top-level directories:
 - `config/`: Runtime configuration files (router rules, etc.).
 - `db/`: Postgres init scripts.
 - `extension/`: Chrome extension (Manifest V3) for quick saves and context menu notes.
+- `openspec/`: OpenSpec project context, active changes, and capability specs.
+- `.codex/`: OpenSpec-generated Codex skills for proposal/apply/archive workflows.
 
 ## Documentation Index
 - `docs/QA.md` / `docs/QA2.md` / `docs/QA3.md` / `docs/QA4.md`: locked decision records (highest priority).

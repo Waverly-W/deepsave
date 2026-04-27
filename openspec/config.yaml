@@ -1,0 +1,21 @@
+schema: spec-driven
+
+context: |
+  DeepSave 是本地优先、NAS 友好的知识库系统。
+  技术栈：FastAPI backend、Celery worker、Redis、PostgreSQL/pgvector/pg_trgm、Next.js App Router frontend、Chrome extension。
+  项目结构：backend/、frontend/、config/、db/、extension/、docs/。
+  DeepSave 的主内容存储已统一为 HTML（content_format=html），详情页使用 minimal-tiptap 编辑。
+  新 API 或前端变更后通常需要 rebuild/restart Docker 服务。
+  与 Hermes web-clipper 联动时，DeepSave 应作为唯一主知识库；collections 仅作为 fallback/导出。
+  关键语义：content_text 只表示调用方提供了内容，不等于 note；是否为 note 必须由 source_type=note 或 note API 明确表达。
+
+rules:
+  proposal:
+    - 使用中文撰写。
+    - Capabilities 必须使用 kebab-case。
+  specs:
+    - 使用 SHALL/MUST 表达规范性要求。
+    - Scenario 标题必须使用四级标题 ####。
+  tasks:
+    - 任务必须使用 - [ ] 复选框格式。
+    - 任务应按依赖顺序排列，并可验证。

@@ -21,5 +21,10 @@ coverage/
 # Logs
 *.log
 
+# Local runtime state
+celerybeat-schedule*
+*.db-shm
+*.db-wal
+
 # OS
 .DS_Store
