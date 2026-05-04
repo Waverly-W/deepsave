@@ -97,7 +97,6 @@ docker compose --profile gpu up -d
 - `LLM_RETRY_ATTEMPTS` / `LLM_RETRY_BASE_S`：摘要重试配置。
 - `VISION_API_KEY` / `VISION_BASE_URL` / `VISION_MODEL` / `VISION_TIMEOUT_S`：图片描述模型。
 - `EMBEDDING_TIMEOUT_SOFT_S` / `EMBEDDING_TIMEOUT_HARD_S`：Embedding 超时。
-- `PLAYWRIGHT_TIMEOUT_SOFT_S` / `PLAYWRIGHT_TIMEOUT_HARD_S`：Playwright 抓取超时。
 - `IMAGE_FETCH_TIMEOUT_S`：图片下载超时。
 - `INGEST_LOCK_TTL_S`：入队 URL 幂等锁 TTL（秒，默认 600）。
 - `INGEST_LOCK_HEARTBEAT_S`：worker 对 item 锁的续约间隔（秒，默认 120）。

@@ -16,7 +16,7 @@
 7. 鉴权：/setup + /login + JWT + Access Token。
 8. 采集入口：/items/ingest（异步） + 任务状态接口。
 9. Redis 幂等锁与 Celery 基础任务框架。
-10. Smart Scraper：HTTP → Playwright 兜底 + 资产落盘。
+10. Smart Scraper：轻量 HTTP 抽取 + 资产落盘；不启用无头浏览器兜底。
 
 ## Phase 3：AI 与检索
 11. Router 规则与 AI 处理（摘要/标签/描述）。

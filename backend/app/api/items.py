@@ -35,23 +35,25 @@ from app.schemas.items import (
     RequeueResponse,
     TaskStatusResponse,
 )
-from app.utils.html import html_to_text
-from app.utils.markdown import markdown_to_html
-from app.utils.text_stats import count_text_stats
-from app.worker.tasks import (
+from app.services.analysis_results import (
     TAG_CANDIDATE_LIMIT,
     TAG_MAX_DEPTH,
-    _load_tag_candidates,
-    _save_results,
-    _title_from_text,
-    polish_item_content,
-    process_item,
-    process_item_content,
+    load_tag_candidates,
+    save_results,
+    title_from_text,
 )
 from app.services.ingest_service import LOCK_TTL_SECONDS, _lock_key, normalize_url
 from app.services.ingest_service import IngestConflictError, IngestService
 from app.services.items_service import ItemsService
+from app.utils.html import html_to_text
+from app.utils.markdown import markdown_to_html
+from app.utils.text_stats import count_text_stats
 from app.utils.url_safety import UnsafeUrlError
+from app.worker.client import (
+    enqueue_polish_item_content,
+    enqueue_process_item,
+    enqueue_process_item_content,
+)
 
 router = APIRouter(
     prefix="/items",
@@ -168,7 +170,7 @@ async def requeue_item(
 
         item.processing_status = "pending"
         item.processing_target_revision = item.content_revision or 0
-        task = process_item.delay(str(item.id), lock_key)
+        task = enqueue_process_item(str(item.id), lock_key)
         payload = json.dumps({"task_id": task.id, "item_id": str(item.id)})
         await redis.set(lock_key, payload, ex=LOCK_TTL_SECONDS)
         return RequeueResponse(task_id=task.id, item_id=str(item.id))
@@ -209,7 +211,7 @@ async def reprocess_item_content(
 
         item.processing_status = "pending"
         item.processing_target_revision = item.content_revision or 0
-        task = process_item_content.delay(str(item.id), lock_key)
+        task = enqueue_process_item_content(str(item.id), lock_key)
         payload = json.dumps({"task_id": task.id, "item_id": str(item.id)})
         await redis.set(lock_key, payload, ex=LOCK_TTL_SECONDS)
         return RequeueResponse(task_id=task.id, item_id=str(item.id))
@@ -256,7 +258,7 @@ async def polish_item_content_route(
 
         item.processing_status = "pending"
         item.processing_target_revision = item.content_revision or 0
-        task = polish_item_content.delay(str(item.id), lock_key)
+        task = enqueue_polish_item_content(str(item.id), lock_key)
         payload = json.dumps({"task_id": task.id, "item_id": str(item.id)})
         await redis.set(lock_key, payload, ex=LOCK_TTL_SECONDS)
         return RequeueResponse(task_id=task.id, item_id=str(item.id))
@@ -295,7 +297,7 @@ async def polish_item_now(
 
         content_text = item.content_text or ""
         plain_text = html_to_text(content_text) or ""
-        base_title = item.title or _title_from_text(plain_text) or item.url
+        base_title = item.title or title_from_text(plain_text) or item.url
         url = item.url
 
     if not plain_text:
@@ -348,7 +350,7 @@ async def polish_item_now(
         polished_title = polish.title or base_title
 
         try:
-            tag_candidates = await _load_tag_candidates(
+            tag_candidates = await load_tag_candidates(
                 async_session_factory,
                 limit=TAG_CANDIDATE_LIMIT,
                 language=language,
@@ -368,7 +370,7 @@ async def polish_item_now(
                 if chunk_texts
                 else []
             )
-            await _save_results(
+            await save_results(
                 async_session_factory,
                 item_id,
                 polished_title,
@@ -421,7 +423,7 @@ async def polish_draft(
             detail="Draft has no content to polish",
         )
 
-    base_title = (payload.title or "").strip() or _title_from_text(plain_text) or "Untitled"
+    base_title = (payload.title or "").strip() or title_from_text(plain_text) or "Untitled"
     language = detect_language(plain_text, base_title)
 
     async def event_stream():
@@ -468,7 +470,7 @@ async def polish_draft(
         polished_title = polish.title or base_title
 
         try:
-            tag_candidates = await _load_tag_candidates(
+            tag_candidates = await load_tag_candidates(
                 async_session_factory,
                 limit=TAG_CANDIDATE_LIMIT,
                 language=language,
@@ -522,7 +524,7 @@ async def create_note(
             detail="Note content is empty",
         )
 
-    title = (payload.title or "").strip() or _title_from_text(plain_text) or "Untitled"
+    title = (payload.title or "").strip() or title_from_text(plain_text) or "Untitled"
     item_id = uuid.uuid4()
     url = f"note://{item_id}"
     normalized_url = normalize_url(url)
@@ -558,7 +560,7 @@ async def create_note(
             if chunk_texts
             else []
         )
-        await _save_results(
+        await save_results(
             async_session_factory,
             item_id,
             title,
@@ -602,7 +604,7 @@ async def create_note(
             await redis.delete(lock_key)
             raise
 
-        task = process_item.delay(str(item_id), lock_key)
+        task = enqueue_process_item(str(item_id), lock_key)
         task_payload = json.dumps({"task_id": task.id, "item_id": str(item_id)})
         await redis.set(lock_key, task_payload, ex=LOCK_TTL_SECONDS)
         return CreateNoteResponse(item_id=str(item_id), task_id=task.id, skipped=False)

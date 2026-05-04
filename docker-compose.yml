@@ -46,6 +46,7 @@ services:
   backend:
     build:
       context: ./backend
+      target: api
     profiles: ["cpu", "gpu"]
     restart: unless-stopped
     environment:
@@ -89,6 +90,7 @@ services:
   worker:
     build:
       context: ./backend
+      target: worker
     profiles: ["cpu", "gpu"]
     command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
     restart: unless-stopped
@@ -121,8 +123,9 @@ services:
   beat:
     build:
       context: ./backend
+      target: beat
     profiles: ["cpu", "gpu"]
-    command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
+    command: ["celery", "-A", "app.worker.beat_app", "beat", "--loglevel=info"]
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+asyncpg://deepsave:deepsave@db:5432/deepsave

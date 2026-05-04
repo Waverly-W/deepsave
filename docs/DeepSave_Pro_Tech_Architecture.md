@@ -59,7 +59,7 @@ graph TD
 | 前端 | React, Next.js 14（App Router）, shadcn/ui | SSR 对首屏加载友好，现代化组件库提升开发效率。 |
 | 后端 API | Python 3.11, FastAPI | Python 是 AI 生态首选，FastAPI 性能高且原生支持异步。 |
 | 任务队列 | Celery + Redis | 处理耗时的爬虫和 AI 推理任务，防止 HTTP 请求超时。 |
-| 爬虫 | Trafilatura（纯文本）+ Playwright（渲染） | 混合策略：Trafilatura 极省资源，Playwright 应对复杂 SPA。 |
+| 爬虫 | Trafilatura（纯文本） | 为降低 NAS 镜像体积与运行资源占用，不启用无头浏览器渲染兜底。 |
 | 关系型库 | PostgreSQL 16（pgvector/pg_trgm） | 统一单库，支持向量检索与模糊检索。 |
 | 向量库 | pgvector（HNSW） | 复用 PostgreSQL，降低部署与一致性成本。 |
 | 检索 | pg_trgm + tsvector + jieba | 标题/标签模糊匹配 + 正文分词检索。 |
@@ -73,7 +73,7 @@ graph TD
 
 1. 接收 (Reception)：用户发送 URL -> FastAPI `/items/ingest` -> 生成 TaskID -> 立即返回 `202 Accepted`。
 2. 调度 (Dispatch)：任务被推入 Celery 默认队列 `celery_default`。
-3. 采集 (Scraping)：Worker 获取任务；尝试 Trafilatura 解析；若失败或内容过短 -> 启动 Playwright 渲染并提取 DOM；保存 `content.html`（必需）与可选 `screenshot.png` 到 `/data/artifacts/{uuid}/`。
+3. 采集 (Scraping)：Worker 获取任务；使用 Trafilatura 解析并保存 `content.html` 到 `/data/artifacts/{uuid}/`；复杂动态渲染页面可能只保存有限内容。
 4. 路由 (Routing)：利用轻量级规则判断内容类型（Article / Image / Code）。
 5. 处理 (Processing)：根据路由结果，调用对应的 Agent。
    - Case A (Local)：调用 `http://ollama:11434/api/chat`
@@ -248,7 +248,7 @@ Return: { "access_token": "..." }  # 仅展示一次
 
 ### 7.1 应对 NAS 低性能的策略
 
-- Rate Limiting：限制爬虫并发数（Concurrency Control）。例如 J4125 CPU 限制同时只能有 1 个 Playwright 实例，2 个 LLM 请求。
+- Rate Limiting：限制爬虫与模型请求并发数（Concurrency Control）。例如 J4125 CPU 限制同时只能有 2 个 LLM 请求。
 - Lazy Processing：如果一次性导入 100 个链接，系统只立即处理前 5 个，其余进入 Backlog，利用夜间闲置时间处理。
 - Embeddings Cache：相同的文本块无需重复计算向量，增加缓存层。
 

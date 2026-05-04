@@ -9,7 +9,7 @@ from app.core.redis import get_redis
 from app.repositories.item_repo import ItemRepository
 from app.utils.markdown import markdown_to_html
 from app.utils.url_safety import validate_ingest_url
-from app.worker.tasks import process_item
+from app.worker.client import enqueue_process_item
 
 LOCK_TTL_SECONDS = int(os.getenv("INGEST_LOCK_TTL_S", "600"))
 
@@ -79,7 +79,7 @@ class IngestService:
                 content_format="html" if resolved_source_type == "note" else None,
             )
 
-            task = process_item.delay(str(item.id), lock_key)
+            task = enqueue_process_item(str(item.id), lock_key)
             payload = json.dumps({"task_id": task.id, "item_id": str(item.id)})
             await self._redis.set(lock_key, payload, ex=LOCK_TTL_SECONDS)
             return IngestResult(task_id=task.id, item_id=str(item.id), reused=False)

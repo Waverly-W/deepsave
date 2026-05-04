@@ -54,7 +54,7 @@
 
 ## 4. 处理流程（Worker）
 1. 入队 → Redis 幂等锁（TTL=600s）。
-2. 抓取：HTTP → Playwright 兜底。
+2. 抓取：轻量 HTTP 抽取（不启用无头浏览器兜底）。
 3. 路由：article/image/code。
 4. 结构化：摘要/标签/元数据。
 5. 向量化：chunk(1000/overlap 200) → embedding(1024)。

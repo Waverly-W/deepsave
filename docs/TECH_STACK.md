@@ -34,8 +34,7 @@
 
 ## 5. 采集与解析
 - Primary：trafilatura
-- Fallback：Playwright
-- Parsing：beautifulsoup4
+- Browser fallback：不启用（为降低 NAS 镜像体积与运行资源占用，复杂动态网页可能抓取不完整）
 - 中文分词：jieba
 - 色板提取：colorgram.py
 

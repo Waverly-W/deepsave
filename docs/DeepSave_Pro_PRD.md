@@ -62,7 +62,7 @@
 | ID | 功能点 | 描述 | 优先级 |
 | --- | --- | --- | --- |
 | F-IN-01 | 剪贴板监听（Desktop） | 后台静默运行，识别剪贴板中的 URL 或图片，弹窗提示“一键归档”。 | P0 |
-| F-IN-02 | 自适应爬虫（Smart Scraper） | 策略升级：<br/>1. Primary：使用轻量级 HTTP 库（如 Trafilatura/Goose）快速提取正文。<br/>2. Fallback：若提取失败或检测到强动态渲染（SPA），自动唤起 Headless Browser（Playwright）进行兜底渲染与抓取。 | P0 |
+| F-IN-02 | 轻量爬虫（Smart Scraper） | 使用轻量级 HTTP 库（如 Trafilatura/Goose）快速提取正文；为降低镜像体积，不启用 Headless Browser 兜底。 | P0 |
 | F-IN-03 | 移动端捷径 | 提供 iOS 快捷指令或 Telegram/微信 Bot 接口，转发即存入（Phase 2+）。 | P2 |
 | F-IN-04 | 扩展设置入口 | 扩展弹窗右上角齿轮进入设置页配置 API URL / Token。 | P0 |
 
@@ -120,7 +120,7 @@
 
 - Phase 1: MVP（核心闭环）- 预计周期：4 周
   - Stack：Next.js + FastAPI + PostgreSQL（pgvector/pg_trgm）
-  - Core：实现混合爬虫（HTTP 优先，Playwright 兜底）
+  - Core：实现轻量 HTTP 爬虫
   - AI：接入 OpenAI Compatible API 作为默认，预留 Ollama 接口
   - Search：三层检索 + RRF 融合
   - UI：基于 shadcn/ui 搭建 Chat 和列表页面

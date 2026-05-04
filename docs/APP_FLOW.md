@@ -13,7 +13,7 @@
 ## 3. 处理管线
 1. URL 规范化与去重（`normalized_url`）。
 2. 生成 `item_id` 与 `task_id`，返回 202。
-3. Celery Worker 抓取：HTTP 优先，失败则 Playwright 兜底。
+3. Celery Worker 抓取：使用轻量 HTTP 抽取；动态渲染页面不再启动无头浏览器兜底。
    - Note 类型：跳过抓取，直接使用 content_text（HTML）。
 4. Router 识别类型 → 调用相应 AI 处理。
 5. 生成结构化字段、向量化、写入数据库。
