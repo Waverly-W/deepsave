@@ -103,6 +103,8 @@ docker compose --profile gpu up -d
 - `ARTIFACTS_BASE_DIR`：抓取产物目录（默认 `/data/artifacts`）。
 - `AUTH_ENFORCED`：是否强制业务接口鉴权（默认 `true`）。
 - `ALLOW_WEAK_SECRET_FOR_DEV`：仅本地开发允许弱密钥（默认 `false`）。
+- `CORS_ALLOW_ORIGINS`：显式允许的前端 Origin 列表，逗号分隔。
+- `CORS_ALLOW_ORIGIN_REGEX`：可选的 Origin 正则；为空时使用默认私有局域网 Origin 规则。
 - `SSRF_PROTECTION_MODE`：`warn|enforce`（默认 `enforce`）。
 - `INGEST_DOMAIN_ALLOWLIST`：可选，逗号分隔域名白名单。
 - `AI_RESOURCE_CONCURRENCY`：AI 处理资源并发槽位（默认 2）。

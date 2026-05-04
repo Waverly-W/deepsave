@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,19 +7,18 @@ from app.api.items import router as items_router
 from app.api.search import router as search_router
 from app.api.system import router as system_router
 from app.api.tags import router as tags_router
+from app.core.cors import get_cors_config
 from app.core.startup_checks import run_startup_checks
 
 
 def create_app() -> FastAPI:
     run_startup_checks()
     app = FastAPI(title="DeepSave Pro API")
-    origins = os.getenv(
-        "CORS_ALLOW_ORIGINS",
-        "http://127.0.0.1:3000,http://localhost:3000",
-    ).split(",")
+    cors = get_cors_config()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[origin.strip() for origin in origins if origin.strip()],
+        allow_origins=cors.allow_origins,
+        allow_origin_regex=cors.allow_origin_regex,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

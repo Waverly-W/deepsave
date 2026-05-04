@@ -58,6 +58,7 @@ services:
       ARTIFACTS_BASE_DIR: /data/artifacts
       ALIYUN_API_KEY: ${ALIYUN_API_KEY}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://127.0.0.1:10100,http://localhost:10100}
+      CORS_ALLOW_ORIGIN_REGEX: ${CORS_ALLOW_ORIGIN_REGEX:-}
     depends_on:
       db:
         condition: service_healthy

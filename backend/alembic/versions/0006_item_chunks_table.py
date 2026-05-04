@@ -8,7 +8,8 @@ Create Date: 2026-02-07
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from pgvector.sqlalchemy import Vector
+
+from app.db.vector import Vector
 
 # revision identifiers, used by Alembic.
 revision = "0006_item_chunks_table"

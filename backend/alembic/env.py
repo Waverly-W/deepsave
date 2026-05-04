@@ -14,16 +14,7 @@ for candidate in ("/app", str(project_root)):
     if candidate not in sys.path:
         sys.path.append(candidate)
 
-try:
-    import app.models  # noqa: F401
-except ModuleNotFoundError as exc:
-    if exc.name == "pgvector":
-        raise RuntimeError(
-            "Missing dependency 'pgvector'. Install backend requirements first "
-            "(cd backend && pip install -r requirements.txt), then run "
-            "'alembic upgrade head' again."
-        ) from exc
-    raise
+import app.models  # noqa: F401
 from app.models.base import Base
 
 config = context.config

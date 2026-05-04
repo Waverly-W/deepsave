@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS base
+FROM python:3.11-alpine AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -8,6 +8,7 @@ WORKDIR /app
 FROM base AS api
 
 COPY requirements-api.txt /app/requirements-api.txt
+COPY requirements-common.txt /app/requirements-common.txt
 RUN pip install --no-cache-dir -r /app/requirements-api.txt
 
 COPY alembic.ini /app/alembic.ini
@@ -20,10 +21,13 @@ EXPOSE 8356
 
 CMD ["/app/entrypoint.sh"]
 
-FROM api AS worker
+FROM base AS worker
 
+COPY requirements-common.txt /app/requirements-common.txt
 COPY requirements-worker.txt /app/requirements-worker.txt
 RUN pip install --no-cache-dir -r /app/requirements-worker.txt
+
+COPY app /app/app
 
 CMD ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
 

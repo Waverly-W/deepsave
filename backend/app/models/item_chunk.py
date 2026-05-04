@@ -3,8 +3,8 @@ import uuid
 from sqlalchemy import ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from pgvector.sqlalchemy import Vector
 
+from app.db.vector import Vector
 from app.models.base import Base
 
 
