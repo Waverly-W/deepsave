@@ -8,7 +8,6 @@ export async function middleware(request: NextRequest) {
   const apiBaseUrl =
     process.env.API_BASE_URL ||
     process.env.NEXT_PUBLIC_API_BASE_URL ||
-    `${request.nextUrl.protocol}//${request.nextUrl.hostname}:10156` ||
     DEFAULT_API_BASE_URL;
 
   if (request.nextUrl.pathname.startsWith("/setup")) {

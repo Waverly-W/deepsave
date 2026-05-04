@@ -81,9 +81,8 @@ docker compose --profile gpu up -d
 - `CORS_ALLOW_ORIGINS`：逗号分隔的允许来源列表。
 
 ### 可选（前端）
-- `NEXT_PUBLIC_API_BASE_URL`：强制指定前端请求后端的完整地址。
-- `NEXT_PUBLIC_API_PORT`：未指定 `NEXT_PUBLIC_API_BASE_URL` 时使用的端口（默认 8356）。
-- `API_BASE_URL`：服务端渲染使用的后端地址（容器内默认 `http://backend:8356`）。
+- `API_BASE_URL`：Next.js 服务端代理使用的后端地址（容器内默认 `http://backend:8356`）。
+- `NEXT_PUBLIC_API_BASE_URL`：可选，仅在需要让浏览器绕过前端代理、直接请求后端时设置；局域网访问建议留空，避免 CORS。
 
 ### 可选（后端：模型与超时）
 - `ALIYUN_EMBEDDING_MODEL`：默认 `text-embedding-v4`。
